@@ -1,0 +1,3466 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fora Torque — Sistema de Gestión y Validación</title>
+    <script>
+        (function () {
+            const role = sessionStorage.getItem('userRole');
+            if (role !== 'personal' && role !== 'gerencia') {
+                window.location.replace('index.html');
+            }
+        })();
+    </script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#030303">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="SPEED.png">
+    <meta name="description" content="Certificados de torque instalable como app y optimizado para celular.">
+
+    <script>
+        const SUPABASE_URL = 'https://prcdjgavxfpcgzeebihr.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByY2RqZ2F2eGZwY2d6ZWViaWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MTI4MDcsImV4cCI6MjEwMzQ4ODgwN30.A0oVHA_PUypjoiGqWi0na1rrGCtgEaoEeUsqhAbD6Mw';
+        const GOOGLE_DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbyllCiikk4PiHZYV3w348_4LMt_nnqsAx8o0IlLEXLYyxPHiyHyH91W8cyyQfvJCy_QmQ/exec';
+        const PDF_ASSETS = {
+            logo: `${SUPABASE_URL}/storage/v1/object/public/certificate-assets/SPEED.png`,
+            firmaInforme: `${SUPABASE_URL}/storage/v1/object/public/certificate-assets/firma%20informe.jpg`,
+            firmaCertificado: `${SUPABASE_URL}/storage/v1/object/public/certificate-assets/firma%20informe.jpg`,
+            marcaAgua: `${SUPABASE_URL}/storage/v1/object/public/certificate-assets/marca%20de%20agua.jpg`,
+            qr: `${SUPABASE_URL}/storage/v1/object/public/certificate-assets/QR.png`
+        };
+        const PDF_CARTA = {
+            ancho: 215.9,
+            alto: 279.4,
+            margen: 20
+        };
+        const PDF_ANCHO_CONTENIDO = PDF_CARTA.ancho - (PDF_CARTA.margen * 2);
+        const PDF_ALTO_CONTENIDO = PDF_CARTA.alto - (PDF_CARTA.margen * 2);
+        const PDF_ESCALA_CERTIFICADO = 1.3;
+        const PDF_HTML2CANVAS_SCALE_CERTIFICADO = 2.5 * PDF_ESCALA_CERTIFICADO;
+        function estiloRenderPdfCertificado() {
+            return `position: absolute; left: -10000px; top: 0; width: ${PDF_ANCHO_CONTENIDO}mm; background: #ffffff; z-index: -1; box-sizing: border-box; padding: 0; margin: 0; height: auto; overflow: visible;`;
+        }
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    </script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#1677d2',
+                            600: '#0b5cab',
+                            700: '#084b8d',
+                            900: '#06356b',
+                            dark: '#0b2440',
+                            card: '#ffffff',
+                            border: '#cbdced',
+                            textMuted: '#60758d'
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse-slow 8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'drift': 'drift 20s infinite alternate ease-in-out',
+                        'drift-reverse': 'drift-reverse 25s infinite alternate ease-in-out',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #eef6ff;
+            background-image: linear-gradient(rgba(238,246,255,0.88), rgba(238,246,255,0.88)), url('coche.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            color: #17324d;
+            font-family: Arial, Helvetica, sans-serif;
+            overflow-x: hidden;
+            line-height: 1.8;
+        }
+        html {
+            font-size: 17px;
+        }
+        p, label, span, div, button {
+            line-height: 1.75;
+            letter-spacing: 0.01em;
+        }
+        input, select, textarea {
+            font-size: 1rem !important;
+            line-height: 1.4 !important;
+            letter-spacing: 0.015em !important;
+        }
+        .field-missing {
+            background-color: rgba(248, 113, 113, 0.12) !important;
+            border-color: rgba(252, 165, 165, 0.85) !important;
+        }
+        .photo-missing {
+            background-color: rgba(248, 113, 113, 0.12) !important;
+            border-color: rgba(252, 165, 165, 0.85) !important;
+        }
+        body, body * {
+            font-family: Arial, Helvetica, sans-serif !important;
+        }
+        @media (max-width: 640px) {
+            body {
+                background-attachment: scroll !important;
+                background-position: top center !important;
+                font-size: 15px;
+            }
+            html {
+                font-size: 15px;
+            }
+            header {
+                position: sticky;
+                top: 0;
+            }
+            header nav {
+                height: auto !important;
+                padding: 0.8rem 0.8rem !important;
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 0.6rem !important;
+            }
+            header nav > div {
+                width: 100% !important;
+                justify-content: center !important;
+            }
+            header nav > div:first-child {
+                justify-content: flex-start !important;
+            }
+            header nav .hidden.md\:flex {
+                display: flex !important;
+            }
+            button, input, select, textarea {
+                font-size: 0.95rem !important;
+            }
+            .w-full.max-w-5xl {
+                max-width: 100% !important;
+            }
+            #view-produccion .grid,
+            #view-registro .grid,
+            #view-produccion .lg\:grid-cols-2,
+            #view-registro .lg\:grid-cols-2 {
+                grid-template-columns: 1fr !important;
+            }
+            #view-clientes .lg\:grid-cols-3 {
+                grid-template-columns: 1fr !important;
+            }
+            .rounded-3xl {
+                border-radius: 1.25rem !important;
+            }
+            .space-y-8 > * + * {
+                margin-top: 1.1rem !important;
+            }
+            .p-6 {
+                padding: 1rem !important;
+            }
+            .py-3\.5 {
+                padding-top: 0.9rem !important;
+                padding-bottom: 0.9rem !important;
+            }
+        }
+        h1, h2, h3 {
+            display: none !important;
+        }
+        #hero-banner {
+            display: none !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        
+        .image-mask {
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 15%, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%);
+        }
+
+        @keyframes drift {
+            0% { transform: translate(0px, 0px) scale(1); }
+            50% { transform: translate(40px, -60px) scale(1.1); }
+            100% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+        @keyframes drift-reverse {
+            0% { transform: translate(0px, 0px) scale(1.1); }
+            50% { transform: translate(-50px, 40px) scale(0.9); }
+            100% { transform: translate(30px, -20px) scale(1.05); }
+        }
+
+        #print-area .print-certificado-doc {
+            font-size: 12px;
+            line-height: 1.22;
+        }
+        #print-area .print-certificado-header {
+            position: relative;
+            margin-bottom: 6px;
+            min-height: 16mm;
+        }
+        #print-area .print-certificado-logo {
+            position: absolute;
+            left: -7mm;
+            top: -5mm;
+            width: 26mm;
+            max-width: 26mm;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            z-index: 2;
+        }
+        #print-area .print-certificado-header-text {
+            text-align: center;
+            width: 100%;
+            padding-top: 0;
+            position: relative;
+            z-index: 1;
+        }
+        #print-area .print-certificado-titulo {
+            margin-bottom: 8px;
+        }
+        #print-area .print-section-title {
+            margin-bottom: 3px;
+        }
+        #print-area .print-compact-table {
+            margin-bottom: 6px !important;
+        }
+        #print-area .print-compact-table td,
+        #print-area .print-compact-table th {
+            padding: 2px 0 !important;
+        }
+        #print-area .print-compact-table th {
+            padding: 4px 6px !important;
+        }
+        #print-area .print-compact-table td {
+            padding: 4px 6px !important;
+        }
+        #print-area .print-certificado-grid {
+            margin-bottom: 6px !important;
+            gap: 2px 14px !important;
+        }
+        #print-area .print-bloque-texto {
+            margin-bottom: 6px !important;
+        }
+        #print-area .print-observaciones {
+            margin-bottom: 4px !important;
+        }
+        #print-area .print-certificado-pie {
+            margin-top: 2px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        #print-area .print-certificado-firma-wrap {
+            margin-top: 2px;
+            padding-right: 20mm;
+        }
+        #print-area .print-certificado-firma {
+            max-width: 118mm;
+            max-height: 48mm;
+            width: 100%;
+            height: auto;
+            margin: 0 auto;
+            object-fit: contain;
+            display: block;
+        }
+        #print-area .print-certificado-qr {
+            width: 18mm;
+            height: 18mm;
+            object-fit: contain;
+        }
+        #print-area .print-certificado-fecha {
+            margin-top: 5px;
+            padding-top: 5px;
+            text-align: left !important;
+            border-top: 0 !important;
+            line-height: 1.35;
+        }
+        #print-area .print-certificado-vigencia {
+            margin-top: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            line-height: 1.35;
+            text-transform: uppercase;
+        }
+        #print-area .print-certificado-dedicacion {
+            margin-top: 20px;
+            text-align: center;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 10px;
+            font-weight: bold;
+            letter-spacing: 0.04em;
+        }
+
+        @media print {
+            @page {
+                size: letter portrait;
+                margin: 0;
+            }
+            html, body {
+                width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                overflow: visible !important;
+            }
+            body > *:not(#print-area) {
+                display: none !important;
+            }
+            #print-area,
+            #print-area.hidden {
+                display: block !important;
+                visibility: visible !important;
+                position: static !important;
+                left: auto !important;
+                top: auto !important;
+                width: 100% !important;
+                max-width: none !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+                background: #ffffff !important;
+                color: #000000 !important;
+                padding: 20mm !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+                font-family: Arial, Helvetica, sans-serif !important;
+                font-size: 12px !important;
+                line-height: 1.22 !important;
+            }
+            #print-area .print-certificado-doc {
+                page-break-inside: avoid !important;
+                break-inside: avoid-page !important;
+            }
+            #print-area .print-compact-table td,
+            #print-area .print-compact-table th {
+                padding: 1px 4px !important;
+            }
+            #print-area * {
+                visibility: visible !important;
+            }
+            #print-area table {
+                display: table !important;
+                width: 100% !important;
+            }
+            #print-area thead {
+                display: table-header-group !important;
+            }
+            #print-area tbody {
+                display: table-row-group !important;
+            }
+            #print-area tr {
+                display: table-row !important;
+            }
+            #print-area th,
+            #print-area td {
+                display: table-cell !important;
+            }
+            #print-area .print-certificado-grid {
+                display: grid !important;
+            }
+            #print-area img {
+                max-width: 100% !important;
+                height: auto !important;
+            }
+            #print-area .print-certificado-firma {
+                max-width: 118mm !important;
+                max-height: 48mm !important;
+            }
+            #print-area .print-certificado-qr {
+                width: 18mm !important;
+                height: 18mm !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        /* Paleta visual azul y blanca para la vista de torque. */
+        header {
+            background-color: rgba(255, 255, 255, 0.97) !important;
+            border-color: #d7e5f2 !important;
+        }
+        body .bg-zinc-950,
+        body .bg-zinc-950\/95,
+        body .bg-zinc-950\/70,
+        body .bg-zinc-900,
+        body .bg-zinc-900\/80,
+        body .bg-zinc-900\/60,
+        body .bg-zinc-900\/40,
+        body .bg-zinc-800 {
+            background-color: #ffffff !important;
+        }
+        body .bg-zinc-950\/70,
+        body .bg-zinc-900\/40 {
+            background-color: rgba(255, 255, 255, 0.9) !important;
+        }
+        body .text-white {
+            color: #17324d !important;
+        }
+        body .text-zinc-200,
+        body .text-zinc-300,
+        body .text-zinc-400 {
+            color: #3f607c !important;
+        }
+        body .text-zinc-500,
+        body .text-zinc-600 {
+            color: #6d879f !important;
+        }
+        body .border-zinc-900\/90,
+        body .border-zinc-800,
+        body .border-zinc-800\/70,
+        body .border-zinc-800\/60,
+        body .border-zinc-800\/50,
+        body .border-zinc-700,
+        body .border-zinc-600 {
+            border-color: #b9d0e5 !important;
+        }
+        body input,
+        body select,
+        body textarea {
+            background-color: #ffffff !important;
+            color: #17324d !important;
+            border-color: #9dbbd5 !important;
+        }
+        body input::placeholder,
+        body textarea::placeholder {
+            color: #8aa0b5 !important;
+        }
+        body .bg-purple-950\/10,
+        body .bg-pink-950\/10,
+        body .bg-indigo-950\/10 {
+            background-color: rgba(22, 119, 210, 0.08) !important;
+        }
+        .registro-titulo-barra {
+            background-color: #2f79b8 !important;
+            color: #ffffff !important;
+        }
+        @media (max-width: 640px) {
+            .registro-titulo-barra {
+                margin-left: -1rem !important;
+                margin-right: -1rem !important;
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+        }
+        #view-produccion,
+        #view-clientes,
+        #view-registro,
+        #view-produccion *,
+        #view-clientes *,
+        #view-registro * {
+            color: #000000 !important;
+        }
+        #view-produccion input::placeholder,
+        #view-produccion textarea::placeholder,
+        #view-clientes input::placeholder,
+        #view-clientes textarea::placeholder,
+        #view-registro input::placeholder,
+        #view-registro textarea::placeholder {
+            color: #000000 !important;
+            opacity: 0.65;
+        }
+        #view-produccion input,
+        #view-produccion textarea,
+        #view-produccion select {
+            font-weight: 400 !important;
+        }
+        #btn-save-certificate,
+        #btn-save-certificate i {
+            color: #ffffff !important;
+        }
+        #view-produccion #form-torque > section {
+            overflow: visible !important;
+        }
+        #view-produccion #form-torque > section.paso-cliente-autocomplete {
+            position: relative;
+            z-index: 60 !important;
+        }
+        #view-produccion #clientes-sugerencias {
+            position: absolute !important;
+            left: 0 !important;
+            right: 0 !important;
+            top: 100% !important;
+            z-index: 200 !important;
+            margin-top: 0.25rem !important;
+            max-height: 16rem !important;
+            overflow-y: auto !important;
+            background-color: #ffffff !important;
+            border: 1px solid #b9d0e5 !important;
+            border-radius: 0.75rem !important;
+            box-shadow: 0 14px 32px rgba(23, 50, 77, 0.22) !important;
+        }
+        #view-produccion #clientes-sugerencias button {
+            background-color: #ffffff !important;
+            color: #17324d !important;
+            border-color: #e2e8f0 !important;
+            transition: background-color 0.15s ease, color 0.15s ease;
+        }
+        #view-produccion #clientes-sugerencias button:hover {
+            background-color: #dceaf7 !important;
+            color: #1e5a8a !important;
+        }
+        #view-produccion #clientes-sugerencias button span {
+            color: inherit !important;
+        }
+        #view-produccion #clientes-sugerencias button span.block.font-bold {
+            font-weight: 600 !important;
+        }
+        #view-produccion #clientes-sugerencias button span.text-xs {
+            opacity: 0.85;
+        }
+        #view-produccion .registro-titulo-barra {
+            position: sticky !important;
+            top: 4rem !important;
+            z-index: 40 !important;
+            width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            box-sizing: border-box !important;
+            margin-top: -1.5rem !important;
+            min-height: 4.25rem !important;
+            display: flex !important;
+            align-items: center !important;
+            padding-left: 2rem !important;
+            padding-top: 0.65rem !important;
+            padding-bottom: 0.65rem !important;
+            background-color: #2f79b8 !important;
+            color: #ffffff !important;
+            line-height: 1.2 !important;
+            isolation: isolate;
+        }
+        #view-produccion .registro-titulo-barra::before {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            top: 0;
+            bottom: 0;
+            left: -100vw;
+            right: -100vw;
+            background-color: #2f79b8;
+        }
+        #view-registro .historial-titulo-barra {
+            position: sticky !important;
+            top: 4rem !important;
+            z-index: 40 !important;
+            width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            box-sizing: border-box !important;
+            margin-top: -1.5rem !important;
+            min-height: 4.25rem !important;
+            display: flex !important;
+            align-items: center !important;
+            padding-left: 2rem !important;
+            padding-top: 0.65rem !important;
+            padding-bottom: 0.65rem !important;
+            background-color: #2f79b8 !important;
+            color: #ffffff !important;
+            line-height: 1.2 !important;
+            isolation: isolate;
+        }
+        #view-registro .historial-titulo-barra::before {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            top: 0;
+            bottom: 0;
+            left: -100vw;
+            right: -100vw;
+            background-color: #2f79b8;
+        }
+        #view-clientes .clientes-titulo-barra {
+            position: sticky !important;
+            top: 4rem !important;
+            z-index: 40 !important;
+            width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            box-sizing: border-box !important;
+            margin-top: -1.5rem !important;
+            min-height: 4.25rem !important;
+            display: flex !important;
+            align-items: center !important;
+            padding-left: 2rem !important;
+            padding-top: 0.65rem !important;
+            padding-bottom: 0.65rem !important;
+            background-color: #2f79b8 !important;
+            color: #ffffff !important;
+            line-height: 1.2 !important;
+            isolation: isolate;
+        }
+        #view-clientes .clientes-titulo-barra::before {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            top: 0;
+            bottom: 0;
+            left: -100vw;
+            right: -100vw;
+            background-color: #2f79b8;
+        }
+        #view-clientes > div > .grid > section.lg\:col-span-2 table thead th {
+            position: static !important;
+            top: auto !important;
+            z-index: auto !important;
+            background-color: #dceaf7 !important;
+            color: #1e5a8a !important;
+            font-weight: 700 !important;
+            font-size: 0.8125rem !important;
+            letter-spacing: 0.06em !important;
+            padding: 1rem 1.25rem !important;
+            border-bottom: 1px solid #b9d4eb !important;
+        }
+        #view-clientes > div > .grid > section.lg\:col-span-2 table thead th:first-child {
+            border-top-left-radius: 0.75rem !important;
+        }
+        #view-clientes > div > .grid > section.lg\:col-span-2 table thead th:last-child {
+            border-top-right-radius: 0.75rem !important;
+        }
+        #view-registro > div > section table thead th {
+            position: static !important;
+            top: auto !important;
+            z-index: auto !important;
+            background-color: #dceaf7 !important;
+            color: #1e5a8a !important;
+            font-weight: 700 !important;
+            font-size: 0.8125rem !important;
+            letter-spacing: 0.06em !important;
+            padding: 1rem 1.25rem !important;
+            border-bottom: 1px solid #b9d4eb !important;
+        }
+        #view-registro > div > section table thead th:first-child {
+            border-top-left-radius: 0.75rem !important;
+        }
+        #view-registro > div > section table thead th:last-child {
+            border-top-right-radius: 0.75rem !important;
+        }
+        #view-clientes > div > .grid > section.lg\:col-span-2 table tbody,
+        #view-registro > div > section table tbody {
+            background-color: #ffffff !important;
+        }
+        #view-clientes > div > .grid > section.lg\:col-span-2 table tbody td,
+        #view-registro > div > section table tbody td {
+            color: #17324d !important;
+            border-color: #e2e8f0 !important;
+        }
+        #view-clientes > div,
+        #view-registro > div {
+            width: 100% !important;
+            max-width: none !important;
+            padding-left: 1.5rem !important;
+            padding-right: 1.5rem !important;
+        }
+        #view-clientes > div > .grid {
+            width: 100% !important;
+            grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem) !important;
+        }
+        #view-clientes > div > .grid > section.lg\:col-span-2 {
+            width: 100% !important;
+            max-width: none !important;
+            border-radius: 0.75rem !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: 0 1px 3px rgba(23, 50, 77, 0.08) !important;
+            background-color: #ffffff !important;
+            overflow: hidden !important;
+        }
+        #view-registro > div > section {
+            width: 100% !important;
+            max-width: none !important;
+            border-radius: 0.75rem !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: 0 1px 3px rgba(23, 50, 77, 0.08) !important;
+            background-color: #ffffff !important;
+            overflow: hidden !important;
+            padding: 0 !important;
+        }
+        #view-clientes > div > .grid > section.lg\:col-span-2 .overflow-x-auto,
+        #view-registro > div > section .overflow-x-auto {
+            background-color: #ffffff !important;
+        }
+        #view-clientes > div > .grid > section.lg\:col-span-2 table tbody tr:hover,
+        #view-registro > div > section table tbody tr:hover {
+            background-color: #f1f5f9 !important;
+        }
+        #view-clientes tr.cliente-historial-row td {
+            background-color: #eef6fc !important;
+            border-top: 1px solid #c5ddf0 !important;
+            border-bottom: 1px solid #c5ddf0 !important;
+            box-shadow: inset 0 3px 8px rgba(47, 121, 184, 0.08);
+        }
+        #view-clientes tr.cliente-fila-activa td {
+            background-color: #f4f9fd !important;
+        }
+        #view-clientes .cliente-historial .cliente-historial-titulo {
+            color: #1e5a8a !important;
+        }
+        #view-clientes .cliente-historial .cliente-historial-subtitulo {
+            color: #2f79b8 !important;
+        }
+        #view-clientes .cliente-historial .cliente-historial-badge {
+            background-color: #dceaf7 !important;
+            color: #1e5a8a !important;
+        }
+        #view-clientes .cliente-historial .cliente-historial-tabla {
+            border: 1px solid #b9d4eb !important;
+            border-radius: 0.625rem !important;
+            background-color: #ffffff !important;
+            overflow: hidden;
+        }
+        #view-clientes .cliente-historial .cliente-historial-tabla thead th {
+            background-color: #dceaf7 !important;
+            color: #1e5a8a !important;
+            font-weight: 700 !important;
+            padding: 0.75rem 1rem !important;
+            border-bottom: 1px solid #b9d4eb !important;
+        }
+        #view-clientes .cliente-historial .cliente-historial-tabla tbody td {
+            color: #17324d !important;
+            padding: 0.75rem 1rem !important;
+            border-color: #e2e8f0 !important;
+        }
+        #view-clientes .cliente-historial .cliente-historial-vacio {
+            border: 1px dashed #b9d4eb !important;
+            background-color: rgba(255, 255, 255, 0.65) !important;
+            color: #4a6785 !important;
+        }
+        header button.nav-vista-btn {
+            background-color: #ffffff !important;
+            color: #17324d !important;
+            border: 1px solid #b9d0e5 !important;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+        header button.nav-vista-btn i {
+            transition: color 0.2s ease;
+        }
+        header button.nav-vista-btn:hover {
+            background-color: #2f79b8 !important;
+            border-color: #2f79b8 !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 8px rgba(47, 121, 184, 0.28);
+        }
+        header button.nav-vista-btn:hover i {
+            color: #ffffff !important;
+        }
+        header button.nav-vista-btn.nav-vista-activa {
+            background-color: #dceaf7 !important;
+            border-color: #2f79b8 !important;
+            color: #1e5a8a !important;
+        }
+        header button.nav-vista-btn.nav-vista-activa i {
+            color: #2f79b8 !important;
+        }
+        header button.nav-vista-btn.nav-vista-activa:hover {
+            background-color: #2f79b8 !important;
+            color: #ffffff !important;
+        }
+        header button.nav-vista-btn.nav-vista-activa:hover i {
+            color: #ffffff !important;
+        }
+        #view-registro button.registro-accion-btn {
+            background-color: #ffffff !important;
+            color: #17324d !important;
+            border: 1px solid #b9d0e5 !important;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+        #view-registro button.registro-accion-btn:hover {
+            background-color: #2f79b8 !important;
+            border-color: #2f79b8 !important;
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(47, 121, 184, 0.25);
+        }
+        #modal-registro .informe-modal-panel {
+            background-color: #ffffff !important;
+            border: 1px solid #c5ddf0 !important;
+            box-shadow: 0 24px 60px rgba(23, 50, 77, 0.22) !important;
+        }
+        #modal-registro .informe-modal-eyebrow {
+            color: #6d879f !important;
+        }
+        #modal-registro .informe-modal-titulo {
+            color: #1e5a8a !important;
+        }
+        #modal-registro .informe-modal-subtitulo,
+        #modal-registro .informe-modal-label,
+        #modal-registro label.informe-campo-label {
+            color: #4a6785 !important;
+        }
+        #modal-registro .informe-modal-header {
+            border-color: #dbe8f4 !important;
+        }
+        #modal-registro .informe-datos-panel {
+            background: linear-gradient(180deg, #f7fbff 0%, #eef6fc 100%) !important;
+            border: 1px solid #c5ddf0 !important;
+        }
+        #modal-registro .informe-datos-panel .informe-dato-valor {
+            color: #17324d !important;
+            font-weight: 600;
+        }
+        #modal-registro .informe-datos-panel .informe-dato-etiqueta {
+            color: #6d879f !important;
+        }
+        #modal-registro #informe-patente {
+            background-color: #dceaf7 !important;
+            color: #1e5a8a !important;
+            border: 1px solid #b9d4eb !important;
+        }
+        #modal-registro textarea.informe-campo {
+            background-color: #ffffff !important;
+            border: 1px solid #b9d0e5 !important;
+            color: #17324d !important;
+        }
+        #modal-registro textarea.informe-campo:focus {
+            border-color: #2f79b8 !important;
+            box-shadow: 0 0 0 3px rgba(47, 121, 184, 0.14);
+            outline: none;
+        }
+        #modal-registro textarea.informe-campo-readonly {
+            background-color: #f8fafc !important;
+            border-color: #e2e8f0 !important;
+            color: #64748b !important;
+        }
+        #modal-registro .informe-seccion-titulo {
+            color: #2f79b8 !important;
+            border-color: #dbe8f4 !important;
+        }
+        #modal-registro .informe-foto-dropzone {
+            background-color: #ffffff !important;
+            border: 2px dashed #b9d4eb !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+        #modal-registro .informe-foto-dropzone:hover {
+            border-color: #2f79b8 !important;
+            background-color: #f8fbff !important;
+        }
+        #modal-registro .informe-foto-dropzone.drag-over {
+            border-color: #2f79b8 !important;
+            background-color: #e6f2fc !important;
+            box-shadow: inset 0 0 0 2px rgba(47, 121, 184, 0.18);
+        }
+        #modal-registro .informe-foto-overlay-empty {
+            color: #6d879f !important;
+        }
+        #modal-registro .informe-foto-overlay-empty:hover {
+            color: #2f79b8 !important;
+        }
+        #modal-registro .informe-foto-overlay-filled {
+            background: rgba(255, 255, 255, 0.82) !important;
+            color: #1e5a8a !important;
+        }
+        #modal-registro .informe-foto-title {
+            color: #1e5a8a !important;
+            background: transparent !important;
+        }
+        #modal-registro .informe-foto-title.informe-foto-title-readonly {
+            color: #64748b !important;
+        }
+        #modal-registro #informe-marcaje-section {
+            border-color: #dbe8f4 !important;
+        }
+        #modal-registro #btn-add-photo-slot {
+            background-color: #ffffff !important;
+            color: #1e5a8a !important;
+            border: 1px solid #b9d4eb !important;
+        }
+        #modal-registro #btn-add-photo-slot:hover {
+            background-color: #2f79b8 !important;
+            color: #ffffff !important;
+            border-color: #2f79b8 !important;
+        }
+        #modal-registro .informe-modal-footer {
+            border-color: #dbe8f4 !important;
+        }
+        #modal-registro .informe-btn-cancelar {
+            background-color: #ffffff !important;
+            color: #17324d !important;
+            border: 1px solid #b9d0e5 !important;
+        }
+        #modal-registro .informe-btn-cancelar:hover {
+            background-color: #eef6fc !important;
+            border-color: #2f79b8 !important;
+            color: #1e5a8a !important;
+        }
+        #modal-registro .informe-btn-editar {
+            background-color: #ffffff !important;
+            color: #1e5a8a !important;
+            border: 1px solid #b9d4eb !important;
+        }
+        #modal-registro .informe-btn-editar:hover {
+            background-color: #dceaf7 !important;
+            border-color: #2f79b8 !important;
+        }
+        #modal-registro .informe-btn-guardar {
+            background-color: #2f79b8 !important;
+            color: #ffffff !important;
+            border: 1px solid #2f79b8 !important;
+        }
+        #modal-registro .informe-btn-guardar:hover {
+            background-color: #256aa3 !important;
+        }
+        #modal-registro .informe-modal-cerrar {
+            color: #6d879f !important;
+        }
+        #modal-registro .informe-modal-cerrar:hover {
+            color: #1e5a8a !important;
+        }
+        @media (max-width: 640px) {
+            #view-clientes > div,
+            #view-registro > div {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+            #view-clientes > div > .grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+    </style>
+</head>
+<body class="relative min-h-screen selection:bg-brand-500 selection:text-white pb-16">
+
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-screen pointer-events-none overflow-hidden z-0">
+        <div class="absolute top-[-10%] left-[10%] w-[500px] h-[500px] rounded-full bg-purple-950/10 blur-[130px] animate-drift"></div>
+        <div class="absolute top-[10%] right-[15%] w-[600px] h-[600px] rounded-full bg-pink-950/10 blur-[150px] animate-drift-reverse"></div>
+        <div class="absolute top-[30%] left-1/3 w-[450px] h-[450px] rounded-full bg-indigo-950/10 blur-[120px] animate-drift"></div>
+    </div>
+
+    <header class="sticky top-0 z-50 backdrop-blur-md border-b border-zinc-900/90 bg-zinc-950/95 transition-all duration-300" style="background-color: rgba(255,255,255,0.97) !important;">
+        <nav class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between md:grid md:grid-cols-3">
+            <div class="flex items-center justify-start">
+                <a href="#" onclick="goHome()" class="flex items-center space-x-3">
+                    <!-- Added fallback image if SPEED.png doesn't exist -->
+                    <img src="SPEED.png" alt="SPEED SERVIC" class="w-10 h-10 object-cover rounded-lg shadow-lg shadow-black/40" onerror="this.src='https://placehold.co/40x40/030303/ffffff?text=SS'">
+                    <span class="text-white font-bold text-xl tracking-tight font-display">MULTISERVIC</span>
+                </a>
+            </div>
+            
+            <div class="hidden md:flex items-center justify-center gap-2 text-sm font-medium whitespace-nowrap">
+                <button onclick="switchView('solicitudes')" id="nav-solicitudes" class="nav-vista-btn inline-flex items-center whitespace-nowrap px-3 py-1.5 rounded-full" style="display: none;">
+                    <i class="fa-solid fa-user-clock mr-2 text-brand-500"></i>SOLICITUDES
+                </button>
+                <button onclick="switchView('clientes')" id="nav-clientes" class="nav-vista-btn inline-flex items-center whitespace-nowrap px-3 py-1.5 rounded-full" style="display: none;">
+                    <i class="fa-solid fa-building mr-2 text-brand-500"></i>CLIENTES
+                </button>
+                <button onclick="switchView('produccion')" id="nav-produccion" class="nav-vista-btn nav-vista-activa inline-flex items-center whitespace-nowrap px-3 py-1.5 rounded-full">
+                    <i class="fa-solid fa-wrench mr-2 text-brand-500"></i>REGISTRO
+                </button>
+                <button onclick="switchView('registro')" id="nav-registro" class="nav-vista-btn inline-flex items-center whitespace-nowrap px-3 py-1.5 rounded-full">
+                    <i class="fa-solid fa-clipboard-list mr-2 text-brand-500"></i>HISTORIAL DE PRO.
+                </button>
+            </div>
+
+            <div class="flex items-center justify-end"></div>
+        </nav>
+    </header>
+
+    <section id="hero-banner" class="relative w-full flex flex-col items-center justify-start z-10 px-4 mt-2 max-w-7xl mx-auto transition-all duration-500">
+        <div class="relative w-full overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-t from-transparent via-pink-900/5 to-transparent blur-3xl pointer-events-none"></div>
+            <img 
+                src="image_65d742.jpg" 
+                alt="Fora Cinematic Interface" 
+                class="w-full h-[120px] md:h-[160px] object-cover image-mask opacity-80"
+                onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%221200%22 height=%22300%22><rect width=%22100%25%22 height=%22100%25%22 fill=%22%23030303%22/></svg>'"
+            >
+            <div class="absolute inset-0 flex flex-col justify-start p-3 pt-2 md:pt-3">
+                <h1 class="text-xl md:text-3xl font-bold font-display text-white tracking-tight -mt-1">SISTEMA INTEGRAL DE GESTIÓN DE TORQUE</h1>
+            </div>
+        </div>
+    </section>
+
+    <main class="relative z-10 max-w-6xl mx-auto px-4 mt-0">
+        <section id="view-produccion" class="view-panel transition-all duration-300 block">
+            <div class="w-full max-w-5xl mx-auto p-8 pt-6 space-y-8">
+                
+                <div class="registro-titulo-barra mb-10 -mx-8 px-8 py-3 text-lg font-bold text-white text-left">REGISTRO DE TORQUE EN TALLER</div>
+
+                <div class="space-y-4 mb-8">
+                    <div>
+                        <span class="text-sm font-semibold text-brand-500 uppercase tracking-widest">Área Técnica</span>
+                        <h2 class="text-3xl font-bold font-display text-white -mt-1">CERTIFICACIÓN DE TORQUE</h2>
+                    </div>
+                </div>
+
+                <form id="form-torque" onsubmit="event.preventDefault();" class="space-y-8">
+                    <!-- PASO 1: Datos del Cliente -->
+                    <section id="paso-datos-cliente" class="rounded-3xl border border-zinc-800/70 bg-zinc-950/70 p-6 shadow-xl shadow-black/20 backdrop-blur-sm space-y-6">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-xs uppercase tracking-[0.35em] text-brand-500 font-semibold">Paso 1</p>
+                                <h3 class="text-xl font-bold text-white">DATOS DEL CLIENTE</h3>
+                                <p class="text-base text-zinc-300 mt-1">Ingresa la información necesaria para generar el certificado oficial.</p>
+                            </div>
+                            <span class="inline-flex items-center rounded-full bg-brand-500/10 text-brand-200 px-3 py-1 text-xs font-semibold">Obligatorio</span>
+                        </div>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Nombre del Cliente</label>
+                                <div class="relative">
+                                    <input
+                                        type="text"
+                                        id="input-cliente"
+                                        autocomplete="off"
+                                        class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-semibold transition-colors focus:outline-none"
+                                    >
+                                    <div id="clientes-sugerencias" class="absolute left-0 right-0 top-full z-30 mt-1 hidden max-h-64 overflow-y-auto rounded-xl border border-zinc-700 bg-zinc-950 shadow-2xl"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">RUT</label>
+                                <input
+                                    type="text"
+                                    id="input-rut"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-semibold transition-colors focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Dirección</label>
+                                <input
+                                    type="text"
+                                    id="input-direccion"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-semibold transition-colors focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Orden de Trabajo</label>
+                                <input
+                                    type="text"
+                                    id="input-orden"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-semibold transition-colors focus:outline-none"
+                                >
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- PASO 2: Identificación del Equipo -->
+                    <section class="rounded-3xl border border-zinc-800/70 bg-zinc-950/70 p-6 shadow-xl shadow-black/20 backdrop-blur-sm space-y-6">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-xs uppercase tracking-[0.35em] text-brand-500 font-semibold">Paso 2</p>
+                                <h3 class="text-xl font-bold text-white">IDENTIFICACIÓN DEL EQUIPO</h3>
+                                <p class="text-base text-zinc-300 mt-1">Registra los datos del vehículo y la máquina usada.</p>
+                            </div>
+                            <span class="inline-flex items-center rounded-full bg-brand-500/10 text-brand-200 px-3 py-1 text-xs font-semibold">Vehículo</span>
+                        </div>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Equipo</label>
+                                <input
+                                    type="text"
+                                    id="input-equipo"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-semibold transition-colors focus:outline-none"
+                                    oninput="this.value = this.value.toUpperCase();"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Marca</label>
+                                <input
+                                    type="text"
+                                    id="input-marca"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-semibold transition-colors focus:outline-none"
+                                    oninput="this.value = this.value.toUpperCase();"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Año</label>
+                                <input
+                                    type="text"
+                                    id="input-anio"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-semibold transition-colors focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Modelo</label>
+                                <input
+                                    type="text"
+                                    id="input-modelo"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-semibold transition-colors focus:outline-none"
+                                    oninput="this.value = this.value.toUpperCase();"
+                                >
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Patente / Placa del Camión</label>
+                                <input
+                                    type="text"
+                                    id="input-patente"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-bold font-mono tracking-widest uppercase transition-colors focus:outline-none"
+                                    oninput="this.value = this.value.toUpperCase();"
+                                >
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- PASO 3: Detalles del Certificado -->
+                    <section class="rounded-3xl border border-zinc-800/70 bg-zinc-950/70 p-6 shadow-xl shadow-black/20 backdrop-blur-sm space-y-6">
+                        <div class="flex items-center justify-between gap-4">
+                            <div>
+                                <p class="text-xs uppercase tracking-[0.35em] text-brand-500 font-semibold">Paso 3</p>
+                                <h3 class="text-xl font-bold text-white">DETALLES DEL CERTIFICADO</h3>
+                                <p class="text-base text-zinc-300 mt-1">Cobra los datos de la herramienta, rangos y verificación.</p>
+                            </div>
+                            <div class="flex flex-col items-end gap-2">
+                                <span class="inline-flex items-center rounded-full bg-brand-500/10 text-brand-200 px-3 py-1 text-xs font-semibold">Documento</span>
+                            </div>
+                        </div>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-500 tracking-wider mb-2 block">Herramienta / Torque</label>
+                                <input
+                                    type="text"
+                                    id="input-torque-nombre"
+                                    value="Crossman Profesional"
+                                    readonly
+                                    class="w-full bg-zinc-900/40 border border-zinc-800/50 text-zinc-400 rounded-2xl px-4 py-3 text-base font-semibold cursor-default focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-500 tracking-wider mb-2 block">Modelo Herramienta</label>
+                                <input
+                                    type="text"
+                                    id="input-modelo-herramienta"
+                                    value="SR 3M 30 13.5"
+                                    readonly
+                                    class="w-full bg-zinc-900/40 border border-zinc-800/50 text-zinc-400 rounded-2xl px-4 py-3 text-base font-semibold cursor-default focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-500 tracking-wider mb-2 block">Certificador</label>
+                                <input
+                                    type="text"
+                                    id="input-certificador"
+                                    value="metrológico spa"
+                                    readonly
+                                    class="w-full bg-zinc-900/40 border border-zinc-800/50 text-zinc-400 rounded-2xl px-4 py-3 text-base font-semibold cursor-default focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-500 tracking-wider mb-2 block">Número Certificado</label>
+                                <input
+                                    type="text"
+                                    id="input-num-certificado"
+                                    value="13651"
+                                    readonly
+                                    class="w-full bg-zinc-900/40 border border-zinc-800/50 text-zinc-400 rounded-2xl px-4 py-3 text-base font-semibold cursor-default focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-500 tracking-wider mb-2 block">Rango 1</label>
+                                <input
+                                    type="text"
+                                    id="input-rango1"
+                                    value="¾ DR 169-849 N-MTS"
+                                    readonly
+                                    class="w-full bg-zinc-900/40 border border-zinc-800/50 text-zinc-400 rounded-2xl px-4 py-3 text-base font-semibold cursor-default focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-500 tracking-wider mb-2 block">Rango 2</label>
+                                <input
+                                    type="text"
+                                    id="input-rango2"
+                                    value="¾ DR 100-600 FT-LB"
+                                    readonly
+                                    class="w-full bg-zinc-900/40 border border-zinc-800/50 text-zinc-400 rounded-2xl px-4 py-3 text-base font-semibold cursor-default focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-500 tracking-wider mb-2 block">Fecha Certificado</label>
+                                <input
+                                    type="text"
+                                    id="input-fecha-cert"
+                                    value="16/11/2025"
+                                    readonly
+                                    class="w-full bg-zinc-900/40 border border-zinc-800/50 text-zinc-400 rounded-2xl px-4 py-3 text-base font-semibold cursor-default focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-500 tracking-wider mb-2 block">Fecha Vencimiento</label>
+                                <input
+                                    type="text"
+                                    id="input-venc-cert"
+                                    value="16/11/2026"
+                                    readonly
+                                    class="w-full bg-zinc-900/40 border border-zinc-800/50 text-zinc-400 rounded-2xl px-4 py-3 text-base font-semibold cursor-default focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-500 tracking-wider mb-2 block">Teléfono Verificación</label>
+                                <input
+                                    type="text"
+                                    id="input-telefono"
+                                    value="2-29479207"
+                                    readonly
+                                    class="w-full bg-zinc-900/40 border border-zinc-800/50 text-zinc-400 rounded-2xl px-4 py-3 text-base font-semibold cursor-default focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Kilometraje</label>
+                                <input
+                                    type="text"
+                                    id="input-kilometraje"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-semibold transition-colors focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Valor de Torque Aplicado</label>
+                                <input
+                                    type="text"
+                                    id="input-torque"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-bold font-mono transition-colors focus:outline-none"
+                                >
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold uppercase text-zinc-300 tracking-wider mb-2 block">Observaciones</label>
+                                <input
+                                    type="text"
+                                    id="input-observaciones"
+                                    class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-2xl px-4 py-3 text-base font-semibold transition-colors focus:outline-none"
+                                >
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="space-y-3 pt-2">
+                        <button 
+                            type="button" 
+                            id="btn-save-certificate"
+                            onclick="saveCertificate()"
+                            class="w-full bg-brand-600 hover:bg-brand-500 text-white py-3.5 rounded-2xl font-bold text-base transition-all flex items-center justify-center gap-2 shadow-lg"
+                        >
+                            <i class="fa-solid fa-floppy-disk"></i> Guardar registro
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </section>
+
+        <section id="view-clientes" class="view-panel transition-all duration-300 hidden">
+            <div class="w-full max-w-6xl mx-auto p-8 pt-6 space-y-8">
+                <div class="clientes-titulo-barra text-lg font-bold text-white">CLIENTES DE MULTISERVIC</div>
+
+                <div class="grid gap-6 lg:grid-cols-3 items-start">
+                    <section class="lg:col-span-2 rounded-3xl border border-zinc-800/70 bg-zinc-950/70 shadow-xl shadow-black/20 backdrop-blur-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[640px] text-left text-sm">
+                                <thead class="text-xs uppercase tracking-wider">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left">N°</th>
+                                        <th class="px-4 py-3 text-left">Empresa / Nombre</th>
+                                        <th class="px-4 py-3 text-left">RUT</th>
+                                        <th class="px-4 py-3 text-left">Dirección</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clientes-lista" class="divide-y divide-slate-200"></tbody>
+                            </table>
+                        </div>
+                        <div id="clientes-vacio" class="hidden py-12 text-center text-zinc-400">
+                            <i class="fa-solid fa-building mb-3 text-3xl text-zinc-600"></i>
+                            <p>No hay clientes registrados.</p>
+                        </div>
+                    </section>
+
+                    <section class="rounded-3xl border border-zinc-800/70 bg-zinc-950/70 p-6 shadow-xl shadow-black/20 backdrop-blur-sm">
+                        <div class="mb-6">
+                            <div class="text-sm font-bold uppercase tracking-wider text-white">NUEVO REGISTRO</div>
+                            <div class="mt-3 h-1 w-8 rounded-full bg-brand-500"></div>
+                        </div>
+                        <form id="form-cliente" class="space-y-5" onsubmit="guardarCliente(event)">
+                            <div>
+                                <label for="cliente-nombre" class="mb-2 block text-sm font-semibold uppercase text-zinc-300 tracking-wider">Nombre de la empresa</label>
+                                <input type="text" id="cliente-nombre" required placeholder="Nombre comercial" class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-xl px-4 py-3 transition-colors focus:outline-none">
+                            </div>
+                            <div>
+                                <label for="cliente-rut" class="mb-2 block text-sm font-semibold uppercase text-zinc-300 tracking-wider">RUT</label>
+                                <input type="text" id="cliente-rut" required placeholder="12.345.678-9" class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-xl px-4 py-3 transition-colors focus:outline-none">
+                            </div>
+                            <div>
+                                <label for="cliente-direccion" class="mb-2 block text-sm font-semibold uppercase text-zinc-300 tracking-wider">Dirección</label>
+                                <input type="text" id="cliente-direccion" placeholder="Dirección del cliente" class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-xl px-4 py-3 transition-colors focus:outline-none">
+                            </div>
+                            <div>
+                                <label for="cliente-contacto" class="mb-2 block text-sm font-semibold uppercase text-zinc-300 tracking-wider">Persona de contacto</label>
+                                <input type="text" id="cliente-contacto" required placeholder="Nombre completo" class="w-full bg-zinc-900 border border-zinc-800 focus:border-brand-500 text-white rounded-xl px-4 py-3 transition-colors focus:outline-none">
+                            </div>
+                            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg">
+                                <i class="fa-solid fa-user-plus"></i> GUARDAR CLIENTE
+                            </button>
+                        </form>
+                    </section>
+                </div>
+            </div>
+        </section>
+
+        <section id="view-solicitudes" class="view-panel transition-all duration-300 hidden">
+            <div class="w-full max-w-6xl mx-auto p-8 pt-6 space-y-8">
+                <div class="clientes-titulo-barra text-lg font-bold text-white">SOLICITUDES DE ACCESO</div>
+
+                <section class="rounded-3xl border border-zinc-800/70 bg-zinc-950/70 p-6 shadow-xl shadow-black/20 backdrop-blur-sm">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Solicitudes de Personal</h2>
+                            <p class="text-sm text-zinc-300 mt-1">Aprueba o rechaza las solicitudes para habilitar el acceso.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" id="solicitudes-pendientes" onclick="setSolicitudesFilter('pending')" class="rounded-lg px-4 py-2 text-sm font-semibold">
+                                Pendientes
+                            </button>
+                            <button type="button" id="solicitudes-revisadas" onclick="setSolicitudesFilter('approved')" class="rounded-lg px-4 py-2 text-sm font-semibold">
+                                Usuarios habilitados
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[680px] text-left text-sm">
+                            <thead class="text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Nombre completo</th>
+                                    <th class="px-4 py-3 text-left">Correo</th>
+                                    <th class="px-4 py-3 text-left">Enviada</th>
+                                    <th class="px-4 py-3 text-left">Estado</th>
+                                    <th class="px-4 py-3 text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="solicitudes-lista" class="divide-y divide-slate-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="solicitudes-vacio" class="hidden py-12 text-center text-zinc-400">
+                        <i class="fa-solid fa-user-clock mb-3 text-3xl text-zinc-600"></i>
+                        <p>No hay registros en esta sección.</p>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="view-registro" class="view-panel transition-all duration-300 hidden">
+            <div class="w-full max-w-5xl mx-auto p-8 pt-6 space-y-8">
+                <div class="historial-titulo-barra text-lg font-bold text-white">HISTORIAL DE PRO.</div>
+
+                <section class="rounded-3xl border border-zinc-800/70 bg-zinc-950/70 shadow-xl shadow-black/20 backdrop-blur-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[700px] text-left text-sm">
+                            <thead class="text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">N°</th>
+                                    <th class="px-4 py-3 text-left">Cliente</th>
+                                    <th class="px-4 py-3 text-left">Orden de trabajo</th>
+                                    <th class="px-4 py-3 text-left">Patente</th>
+                                    <th class="px-4 py-3 text-left">Equipo</th>
+                                    <th class="px-4 py-3 text-left">Fecha certificado</th>
+                                    <th class="px-4 py-3 text-left">Estado</th>
+                                    <th class="px-4 py-3 text-left">Fecha de registro</th>
+                                </tr>
+                            </thead>
+                            <tbody id="registro-lista" class="divide-y divide-slate-200"></tbody>
+                        </table>
+                    </div>
+                    <div id="registro-vacio" class="py-12 text-center text-zinc-400">
+                        <i class="fa-solid fa-clock-rotate-left mb-3 text-3xl text-zinc-600"></i>
+                        <p>No hay certificados emitidos.</p>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <div id="print-area" class="hidden">
+        <div class="print-certificado-doc" style="position: relative; width: 100%; box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; color: #111; background: white; padding: 0; margin: 0;">
+                <div class="print-certificado-header">
+                    <img src="SPEED.png" alt="MULTISERVIC Logo" class="print-certificado-logo" onerror="this.remove()">
+                    <div class="print-certificado-header-text" style="padding-left: 18mm; padding-right: 18mm; box-sizing: border-box;">
+                        <div style="font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em;">MULTISERVIC S.P.A</div>
+                        <div style="font-size: 9px; color: #333; margin-top: 2px; letter-spacing: 0.04em; line-height: 1.2;">DEDICADO A SERVICIOS DE MANTENCIÓN Y REPARACIÓN VEHÍCULOS MENORES Y PESADOS</div>
+                    </div>
+                </div>
+
+                <div class="print-certificado-titulo" style="text-align: center;">
+                    <div style="font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.08em;">CERTIFICADO DE TORQUE</div>
+                </div>
+
+                <div class="print-section-title" style="font-weight: bold; text-transform: uppercase;">DATOS DEL CLIENTE:</div>
+                <table class="print-compact-table" style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 160px; vertical-align: top; padding: 2px 0;">Nombre:</td>
+                        <td style="vertical-align: top; padding: 2px 0;"><strong id="print-cliente">SANTA IDE SPA</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; padding: 2px 0;">Dirección:</td>
+                        <td style="vertical-align: top; padding: 2px 0;"><strong id="print-direccion">14 DE FEBRERO 2474-4</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; padding: 2px 0;">Rut.:</td>
+                        <td style="vertical-align: top; padding: 2px 0;"><strong id="print-rut">76.267.002-K</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; padding: 2px 0;">Orden de Trabajo:</td>
+                        <td style="vertical-align: top; padding: 2px 0;"><strong id="print-orden">31992</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; padding: 2px 0;">Fecha de Emisión:</td>
+                        <td style="vertical-align: top; padding: 2px 0;"><strong id="print-fecha-emision"></strong></td>
+                    </tr>
+                </table>
+
+                <div class="print-section-title" style="font-weight: bold; text-transform: uppercase;">IDENTIFICACIÓN DEL EQUIPO</div>
+                <table class="print-compact-table" style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 160px; vertical-align: top; padding: 2px 0;">• EQUIPO:</td>
+                        <td style="vertical-align: top; padding: 2px 0;"><strong id="print-equipo">CAMION</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; padding: 2px 0;">• MARCA:</td>
+                        <td style="vertical-align: top; padding: 2px 0;"><strong id="print-marca">VOLVO</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; padding: 2px 0;">• AÑO:</td>
+                        <td style="vertical-align: top; padding: 2px 0;"><strong id="print-anio">2023</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; padding: 2px 0;">• MODELO:</td>
+                        <td style="vertical-align: top; padding: 2px 0;"><strong id="print-modelo">VM</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align: top; padding: 2px 0;">• PATENTE:</td>
+                        <td style="vertical-align: top; padding: 2px 0;"><strong id="print-patente">SLXZ-26</strong></td>
+                    </tr>
+                </table>
+
+                <div class="print-section-title" style="font-weight: bold; text-align: left; text-transform: uppercase;">INFORMACION DE TORQUIMETRO</div>
+                <div class="print-bloque-texto">Estimado(a), por medio de este presente se extiende la siguiente constancia de torque para:</div>
+
+                <div class="print-certificado-grid" style="display: grid; grid-template-columns: 1fr 1fr; padding-left: 8px;">
+                    <div><strong>Torque:</strong> <span id="print-torque-nombre">Crossman Profesional</span></div>
+                    <div><strong>Certificador:</strong> <span id="print-certificador">metrológico spa</span></div>
+                    <div><strong>Modelo:</strong> <span id="print-modelo-herramienta">SR 3M 30 13.5</span></div>
+                    <div><strong>Certificado:</strong> <span id="print-num-certificado">13651</span></div>
+                    <div><strong>Rango:</strong> <span id="print-rango1">¾ DR 169-849 N-MTS</span></div>
+                    <div><strong>Fecha Certificado:</strong> <span id="print-fecha-cert">16/11/2025</span></div>
+                    <div style="padding-left: 10px;"><span id="print-rango2">¾ DR 100-600 FT-LB</span></div>
+                    <div><strong>Fecha Vencimiento:</strong> <span id="print-venc-cert">16/11/2026</span></div>
+                    <div></div>
+                    <div><strong>Teléfono Verificación:</strong> <span id="print-telefono">2-29479207</span></div>
+                </div>
+
+                <div class="print-bloque-texto">
+                    <table class="print-compact-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="background: #f5f5f5;">
+                                <th style="padding: 6px 8px; border: 1px solid #000;">EQUIPO MARCA</th>
+                                <th style="padding: 6px 8px; border: 1px solid #000;">MODELO</th>
+                                <th style="padding: 6px 8px; border: 1px solid #000;">TORQUE APLICADO</th>
+                                <th style="padding: 6px 8px; border: 1px solid #000;">KILOMETRAJE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding: 6px 8px; border: 1px solid #000;"><span id="print-table-equi-marca">CAMION VOLVO</span></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000;"><span id="print-table-modelo">VM</span></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000;"><span id="print-torque-aplicado">600N/M</span></td>
+                                <td style="padding: 6px 8px; border: 1px solid #000;"><span id="print-kilometraje">47.305 KM</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="print-section-title" style="font-weight: bold;">OBSERVACIONES:</div>
+                <div class="print-observaciones" style="padding-left: 8px; min-height: 0;"><span id="print-observaciones"></span></div>
+
+                <div class="print-certificado-pie">
+                    <div class="print-certificado-firma-wrap" style="display: flex; align-items: flex-end; justify-content: center; position: relative; box-sizing: border-box;">
+                        <img src="firma informe.jpg" alt="Firma y sello" class="print-certificado-firma" onerror="this.style.display='none'">
+                        <img src="QR.png" alt="Código QR" class="print-certificado-qr" style="position: absolute; right: 0; bottom: 0;" onerror="this.style.display='none'">
+                    </div>
+                    <div class="print-certificado-fecha" style="font-weight: bold;">
+                        Calama, <span id="print-footer-fecha">14 de julio del 2026</span>
+                        <div class="print-certificado-vigencia">
+                            VIGENCIA DE 3 MESES A CONTAR DE LA FECHA DE EMISION<br>
+                            EL PRESENTE DOCUMENTO PIERDE VALIDEZ EN CASO DE QUE LA UNIDAD PRESENTE ALGUNA INTERVENCION FUERA<br>
+                            DE TALLER
+                        </div>
+                    </div>
+                    <div class="print-certificado-dedicacion">
+                        Dedicados a servicios de Mantención y Reparación de Vehículos Menores y pesados.
+                    </div>
+                </div>
+        </div>
+    </div>
+
+    <div id="modal-expanded-image" class="fixed inset-0 z-50 flex items-center justify-center bg-black/95 hidden px-4" onclick="closeModal('modal-expanded-image')">
+        <div class="relative max-w-3xl w-full flex items-center justify-center">
+            <button class="absolute top-4 right-4 text-white hover:text-zinc-300 text-3xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <img id="expanded-view-img" class="max-h-[90vh] max-w-full rounded-xl border border-zinc-800 object-contain shadow-2xl">
+        </div>
+    </div>
+
+    <div id="modal-registro" class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 hidden px-4 pt-20 pb-20" onclick="closeModal('modal-registro')">
+        <div class="informe-modal-panel relative w-full max-w-4xl rounded-2xl p-7" onclick="event.stopPropagation()">
+            <button type="button" class="informe-modal-cerrar absolute right-5 top-4 text-2xl transition-colors" onclick="closeModal('modal-registro')" title="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="informe-modal-header mb-7 border-b pb-5 pr-8">
+                <div class="informe-modal-eyebrow text-xs font-semibold uppercase tracking-[0.25em]">Documento técnico</div>
+                <div class="informe-modal-titulo mt-1 text-2xl font-bold uppercase tracking-wide">INFORME TÉCNICO</div>
+                <div class="informe-modal-subtitulo mt-1 text-sm">Antecedentes del servicio y evaluación técnica</div>
+            </div>
+            <form id="form-informe" class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                <div class="informe-datos-panel sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-y-4 gap-x-6 text-sm mb-2 p-5 rounded-xl">
+                    <div><span class="informe-dato-etiqueta block text-xs font-semibold uppercase tracking-wider mb-1">Cliente</span> <span id="informe-cliente" class="informe-dato-valor"></span></div>
+                    <div><span class="informe-dato-etiqueta block text-xs font-semibold uppercase tracking-wider mb-1">Dirección</span> <span id="informe-direccion" class="informe-dato-valor"></span></div>
+                    <div><span class="informe-dato-etiqueta block text-xs font-semibold uppercase tracking-wider mb-1">RUT</span> <span id="informe-rut" class="informe-dato-valor"></span></div>
+                    <div><span class="informe-dato-etiqueta block text-xs font-semibold uppercase tracking-wider mb-1">Orden de Trabajo</span> <span id="informe-orden" class="informe-dato-valor"></span></div>
+                    <div><span class="informe-dato-etiqueta block text-xs font-semibold uppercase tracking-wider mb-1">Equipo</span> <span id="informe-equipo" class="informe-dato-valor"></span></div>
+                    <div><span class="informe-dato-etiqueta block text-xs font-semibold uppercase tracking-wider mb-1">Marca</span> <span id="informe-marca" class="informe-dato-valor"></span></div>
+                    <div><span class="informe-dato-etiqueta block text-xs font-semibold uppercase tracking-wider mb-1">Año</span> <span id="informe-anio" class="informe-dato-valor"></span></div>
+                    <div><span class="informe-dato-etiqueta block text-xs font-semibold uppercase tracking-wider mb-1">Modelo</span> <span id="informe-modelo" class="informe-dato-valor"></span></div>
+                    <div><span class="informe-dato-etiqueta block text-xs font-semibold uppercase tracking-wider mb-1">Patente</span> <span id="informe-patente" class="font-bold px-2.5 py-1 rounded tracking-widest inline-block mt-0.5 shadow-sm"></span></div>
+                </div>
+
+                <div class="informe-seccion-titulo mt-3 border-b pb-3 text-xs font-bold uppercase tracking-[0.2em] sm:col-span-2">Completar informe</div>
+                <label class="informe-campo-label text-sm font-medium sm:col-span-2">Problemas y/o Condición<textarea id="informe-problemas" rows="3" class="informe-campo mt-1 w-full rounded-lg px-3 py-2 placeholder-zinc-400" required></textarea></label>
+                <label class="informe-campo-label text-sm font-medium sm:col-span-2">Proceso y/o Observaciones<textarea id="informe-proceso" rows="3" class="informe-campo mt-1 w-full rounded-lg px-3 py-2 placeholder-zinc-400" required></textarea></label>
+                
+                <div class="sm:col-span-2 mt-2">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="informe-modal-label text-sm font-medium">Registro Fotográfico Detallado</span>
+                    </div>
+                    <div id="informe-fotos-container" class="space-y-6">
+                        <div id="informe-fotos-iniciales" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        </div>
+                        <div id="informe-marcaje-section" class="border-t pt-5">
+                            <div class="mb-4 flex items-center justify-between gap-3">
+                                <span class="informe-seccion-titulo text-xs font-bold uppercase tracking-wider">Detalle de marcaje de rueda</span>
+                                <button type="button" id="btn-add-photo-slot" onclick="addInformePhotoSlot('', null, 'marcaje')" class="text-xs font-semibold px-3 py-1.5 rounded-lg transition-all shadow-sm">
+                                    <i class="fa-solid fa-plus mr-1"></i> Añadir cuadro
+                                </button>
+                            </div>
+                            <div id="informe-fotos-marcaje" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <label class="informe-campo-label text-sm font-medium sm:col-span-2 mt-2">Recomendaciones<textarea id="informe-recomendaciones" rows="3" class="informe-campo mt-1 w-full rounded-lg px-3 py-2 placeholder-zinc-400" required></textarea></label>
+                <div class="informe-modal-footer flex justify-end gap-2 sm:col-span-2 mt-4 pt-4 border-t">
+                    <button type="button" onclick="closeModal('modal-registro')" class="informe-btn-cancelar rounded-lg px-5 py-2 text-sm transition-colors">Cancelar</button>
+                    <button type="button" id="btn-editar-informe" onclick="setInformeMode('edit')" class="informe-btn-editar hidden rounded-lg px-5 py-2 text-sm font-bold transition-colors shadow-sm">Editar</button>
+                    <button type="submit" id="btn-guardar-informe" class="informe-btn-guardar rounded-lg px-5 py-2 text-sm font-bold transition-colors shadow-lg">Guardar informe</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="print-informe" class="hidden">
+            <div style="position: relative; width: 100%; max-width: 210mm; box-sizing: border-box; background: white; color: #111; padding: 0 0 20mm; font-family: Arial, Helvetica, sans-serif !important; font-size: 11.5px; line-height: 1.5; margin: 0 auto; overflow: visible;">
+            <div style="position: relative; z-index: 1; min-height: 58px; font-family: Arial, Helvetica, sans-serif !important; font-size: 16px; font-weight: bold; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.1em; padding-bottom: 6px;">
+                <img src="SPEED.png" alt="SPEED" style="position: absolute; left: 0; top: 0; width: 72px; height: auto; max-width: 72px; max-height: none; display: block; z-index: 2;" onerror="this.remove()">
+                <div style="width: 100%; text-align: center; padding-top: 0;">INFORME TÉCNICO</div>
+            </div>
+            
+            <div style="position: relative; z-index: 1; margin-bottom: 20px; page-break-inside: avoid;">
+                <div style="font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 10px; color: #111; padding-bottom: 4px;">Datos del Registro</div>
+                <div style="display: flex; flex-direction: column; gap: 4px; font-size: 11.5px;">
+                    <div><strong>Cliente:</strong> <span id="informe-print-cliente"></span></div>
+                    <div><strong>Dirección:</strong> <span id="informe-print-direccion"></span></div>
+                    <div><strong>RUT:</strong> <span id="informe-print-rut"></span></div>
+                    <div><strong>Orden de Trabajo:</strong> <span id="informe-print-orden"></span></div>
+                    <div><strong>Equipo:</strong> <span id="informe-print-equipo"></span></div>
+                    <div><strong>Marca:</strong> <span id="informe-print-marca"></span></div>
+                    <div><strong>Año:</strong> <span id="informe-print-anio"></span></div>
+                    <div><strong>Modelo:</strong> <span id="informe-print-modelo"></span></div>
+                    <div><strong>Patente:</strong> <span id="informe-print-patente"></span></div>
+                </div>
+            </div>
+
+            <div style="position: relative; z-index: 1; border-top: 1px solid #777; margin: 0 0 20px;"></div>
+
+            <div data-pdf-keep-together="true" style="position: relative; z-index: 1; margin-bottom: 20px; page-break-inside: avoid;">
+                <div style="font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 8px; color: #111; padding-bottom: 4px; page-break-after: avoid;">Problemas y/o Condición</div>
+                <div id="informe-print-problemas" style="white-space: pre-wrap; padding: 4px 0; min-height: 20px;"></div>
+            </div>
+
+            <div data-pdf-keep-together="true" style="position: relative; z-index: 1; margin-bottom: 20px; page-break-inside: avoid;">
+                <div style="font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 8px; color: #111; padding-bottom: 4px; page-break-after: avoid;">Proceso y/o Observaciones</div>
+                <div id="informe-print-proceso" style="white-space: pre-wrap; padding: 4px 0; min-height: 20px;"></div>
+            </div>
+            
+            <div style="position: relative; z-index: 1; margin-bottom: 20px;">
+                <div style="font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 12px; color: #111; padding-bottom: 4px; page-break-after: avoid;">Registro Fotográfico</div>
+                <div id="informe-print-fotos" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <!-- Las fotos se inyectan aquí -->
+                </div>
+            </div>
+
+            <div data-pdf-keep-together="true" style="position: relative; z-index: 1; margin-bottom: 20px; page-break-inside: avoid;">
+                <div style="font-weight: bold; font-size: 12px; text-transform: uppercase; margin-bottom: 8px; color: #111; padding-bottom: 4px; page-break-after: avoid;">Recomendaciones</div>
+                <div id="informe-print-recomendaciones" style="white-space: pre-wrap; padding: 4px 0; min-height: 20px;"></div>
+            </div>
+
+            <div data-pdf-keep-together="true" style="position: relative; z-index: 1; text-align: center; margin-top: 18px; page-break-inside: avoid;">
+                <img src="firma informe.jpg" alt="Firma" style="display: block; width: auto; height: auto; max-width: 135mm; max-height: 68mm; object-fit: contain; margin: 0 auto;" onerror="this.remove()">
+            </div>
+
+        </div>
+    </div>
+
+    <div id="system-toast" class="fixed bottom-6 right-6 z-50 bg-zinc-900 border border-brand-500/30 text-white rounded-2xl p-4 shadow-2xl flex items-center space-x-3 transition-all transform translate-y-24 opacity-0 max-w-sm">
+        <div class="w-10 h-10 rounded-full bg-brand-900/30 text-brand-400 border border-brand-500/20 flex items-center justify-center">
+            <i class="fa-solid fa-bell" id="toast-icon"></i>
+        </div>
+        <div class="flex-1">
+            <h5 class="text-xs font-bold text-zinc-300 uppercase tracking-wider" id="toast-title">Sistema</h5>
+            <p class="text-xs text-zinc-400 mt-0.5" id="toast-message">Mensaje informativo de prueba.</p>
+        </div>
+    </div>
+
+    <script>
+        const VirtualSupabase = {
+            certificates: [
+                {
+                    id: 'demo-certificado-001',
+                    created_at: '2026-08-14T14:30:00.000Z',
+                    cliente: 'TRANSPORTES DEL NORTE SPA',
+                    direccion: 'Av. Industrial 1450, Calama',
+                    rut: '76.345.678-9',
+                    orden_trabajo: 'OT-1045',
+                    equipo: 'CAMION',
+                    marca: 'VOLVO',
+                    anio: '2023',
+                    modelo: 'VM',
+                    patente: 'ABCD-12',
+                    torque_nombre: 'Crossman Profesional',
+                    modelo_herramienta: 'SR 3M 30 13.5',
+                    certificador: 'Metrologico SPA',
+                    num_certificado: '13651',
+                    rango1: '3/4 DR 169-849 N-MTS',
+                    rango2: '3/4 DR 100-600 FT-LB',
+                    fecha_cert: '14/08/2026',
+                    venc_cert: '14/08/2027',
+                    telefono: '2-29479207',
+                    kilometraje: '47.305 KM',
+                    torque_aplicado: '600N/M',
+                    observaciones: 'Torque verificado correctamente.',
+                    informe: {
+                        cliente: 'TRANSPORTES DEL NORTE SPA',
+                        direccion: 'Av. Industrial 1450, Calama',
+                        rut: '76.345.678-9',
+                        orden_trabajo: 'OT-1045',
+                        equipo: 'CAMION',
+                        marca: 'VOLVO',
+                        anio: '2023',
+                        modelo: 'VM',
+                        patente: 'ABCD-12',
+                        problemas: 'Se realiza inspección visual y revisión general del sistema de torque. No se observan daños externos ni condiciones inseguras para la operación.',
+                        proceso: 'Se verifica el estado de la herramienta, se realiza limpieza de componentes y se comprueba el torque aplicado según el procedimiento de trabajo establecido.',
+                        fotos: [
+                            { title: 'Registro de prueba', src: 'SPEED.png' }
+                        ],
+                        recomendaciones: 'Mantener la herramienta limpia y almacenada en un lugar seco. Realizar una nueva verificación dentro del periodo recomendado por el fabricante.',
+                        updated_at: '2026-08-25T10:00:00.000Z'
+                    }
+                },
+                {
+                    id: 'demo-certificado-002',
+                    created_at: '2026-08-15T10:15:00.000Z',
+                    cliente: 'SERVICIOS MINEROS CALAMA',
+                    direccion: 'Ruta 25 Km 8, Calama',
+                    rut: '77.234.567-8',
+                    orden_trabajo: 'OT-1046',
+                    equipo: 'CAMIONETA',
+                    marca: 'TOYOTA',
+                    anio: '2022',
+                    modelo: 'HILUX',
+                    patente: 'EFGH-34',
+                    torque_nombre: 'Llave de Torque',
+                    modelo_herramienta: 'TW 2M 20 10.5',
+                    certificador: 'Metrologico SPA',
+                    num_certificado: '13652',
+                    rango1: '1/2 DR 40-200 N-MTS',
+                    rango2: '1/2 DR 30-150 FT-LB',
+                    fecha_cert: '15/08/2026',
+                    venc_cert: '15/08/2027',
+                    telefono: '2-29479207',
+                    kilometraje: '62.180 KM',
+                    torque_aplicado: '450N/M',
+                    observaciones: 'Inspeccion completada sin novedades.'
+                }
+            ],
+            loadCertificates: async function() {
+                const { data, error } = await supabaseClient
+                    .from('certificates')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                this.certificates = data || [];
+                const { data: reports, error: reportsError } = await supabaseClient
+                    .from('technical_reports')
+                    .select('*');
+                if (reportsError) throw reportsError;
+                const { data: photoFiles, error: filesError } = await supabaseClient
+                    .from('certificate_files')
+                    .select('*')
+                    .order('sort_order', { ascending: true });
+                if (filesError) throw filesError;
+                const reportsByCertificate = new Map((reports || []).map((report) => [report.certificate_id, report]));
+                const photosByCertificate = new Map();
+                (photoFiles || []).forEach((file) => {
+                    if (file.file_type !== 'technical_photo') return;
+                    const photos = photosByCertificate.get(file.certificate_id) || [];
+                    photos.push({
+                        title: file.photo_title || file.original_name || 'FOTOGRAFÍA',
+                        src: file.external_file_id ? `https://drive.google.com/thumbnail?id=${file.external_file_id}&sz=w1600` : file.external_url
+                    });
+                    photosByCertificate.set(file.certificate_id, photos);
+                });
+                this.certificates.forEach((certificate) => {
+                    const report = reportsByCertificate.get(certificate.id);
+                    const reportPdf = (photoFiles || []).find((file) =>
+                        file.certificate_id === certificate.id && file.file_type === 'technical_report_pdf'
+                    );
+                    if (report) certificate.informe = {
+                        ...report,
+                        fotos: photosByCertificate.get(certificate.id) || [],
+                        pdfUrl: reportPdf?.external_url || null
+                    };
+                });
+                return this.certificates;
+            },
+            insertCertificate: async function(record) {
+                const { data, error } = await supabaseClient
+                    .from('certificates')
+                    .insert(record)
+                    .select()
+                    .single();
+                if (error) throw error;
+                this.certificates.unshift(data);
+                return data;
+            },
+            uploadPhoto: async function(file, prefix) {
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        if (!file) {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = 400;
+                            canvas.height = 300;
+                            const ctx = canvas.getContext('2d');
+                            ctx.fillStyle = '#111827';
+                            ctx.fillRect(0, 0, 400, 300);
+                            ctx.fillStyle = '#10b981';
+                            ctx.font = 'bold 14px monospace';
+                            ctx.fillText(`✓ EVIDENCIA ${prefix.toUpperCase()} OK`, 20, 50);
+                            resolve(canvas.toDataURL('image/jpeg'));
+                        } else {
+                            const reader = new FileReader();
+                            reader.onload = (e) => resolve(e.target.result);
+                            reader.readAsDataURL(file);
+                        }
+                    }, 500);
+                });
+            }
+        };
+
+        const AppState = {
+            uploadedPhotos: { patente: null, proceso: null },
+            isSavingCertificate: false,
+            isSavingReport: false,
+            solicitudesFilter: 'pending'
+        };
+
+        function isPersonalAccess() {
+            return sessionStorage.getItem('userRole') === 'personal';
+        }
+
+        function isManagementAccess() {
+            const role = sessionStorage.getItem('userRole');
+            return role === 'gerencia' || role === 'admin' || role === 'administrador';
+        }
+
+        function setupRoleVisibility() {
+            const clientesNav = document.getElementById('nav-clientes');
+            const solicitudesNav = document.getElementById('nav-solicitudes');
+            if (clientesNav) clientesNav.style.display = isManagementAccess() ? 'inline-flex' : 'none';
+            if (solicitudesNav) solicitudesNav.style.display = isManagementAccess() ? 'inline-flex' : 'none';
+        }
+
+        window.onload = async function() {
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) {
+                    sessionStorage.removeItem('userRole');
+                    window.location.replace('index.html');
+                    return;
+                }
+
+                if (isPersonalAccess()) {
+                    const { data: profile, error: profileError } = await supabaseClient
+                        .from('user_profiles')
+                        .select('status')
+                        .eq('user_id', session.user.id)
+                        .single();
+                    if (profileError || !profile || profile.status !== 'approved') {
+                        await supabaseClient.auth.signOut();
+                        sessionStorage.removeItem('userRole');
+                        window.location.replace('index.html');
+                        return;
+                    }
+                }
+
+                await VirtualSupabase.loadCertificates();
+                setupRoleVisibility();
+                switchView('produccion');
+                setupEnterKeyNavigation();
+                setupClienteAutocomplete();
+            } catch (error) {
+                console.error('No se pudieron cargar los certificados desde Supabase:', error);
+                switchView('produccion');
+                setupRoleVisibility();
+                setupEnterKeyNavigation();
+                setupClienteAutocomplete();
+                showToast('Error', 'No se pudieron cargar los registros. Revisa la consola.', 'fa-circle-exclamation');
+            }
+        };
+
+        function setupEnterKeyNavigation() {
+            const form = document.getElementById('form-torque');
+            if (!form) return;
+            const focusableElements = Array.from(form.querySelectorAll('input:not([type="hidden"]), select, textarea'));
+            
+            focusableElements.forEach((element, index) => {
+                element.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter') {
+                        if (element.tagName === 'TEXTAREA') return;
+                        if (element.id === 'input-cliente') {
+                            const primeraSugerencia = document.querySelector('#clientes-sugerencias:not(.hidden) button');
+                            if (primeraSugerencia) primeraSugerencia.click();
+                        }
+                        event.preventDefault();
+                        const nextElement = focusableElements[index + 1];
+                        if (nextElement) {
+                            nextElement.focus();
+                            if (typeof nextElement.select === 'function') nextElement.select();
+                        } else {
+                            const saveBtn = document.getElementById('btn-save-certificate');
+                            if (saveBtn) saveCertificate();
+                        }
+                    }
+                });
+            });
+        }
+
+        function switchView(viewName) {
+            if ((viewName === 'clientes' || viewName === 'solicitudes') && !isManagementAccess()) {
+                viewName = 'produccion';
+            }
+            document.querySelectorAll('.view-panel').forEach(panel => panel.classList.add('hidden'));
+            const targetView = document.getElementById(`view-${viewName}`);
+            document.getElementById('nav-clientes').classList.toggle('nav-vista-activa', viewName === 'clientes');
+            document.getElementById('nav-solicitudes').classList.toggle('nav-vista-activa', viewName === 'solicitudes');
+            document.getElementById('nav-produccion').classList.toggle('nav-vista-activa', viewName === 'produccion');
+            document.getElementById('nav-registro').classList.toggle('nav-vista-activa', viewName === 'registro');
+            if (viewName === 'solicitudes') {
+                renderSolicitudes();
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+            }
+            if (viewName === 'clientes') {
+                renderClientes();
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+            }
+            if (viewName === 'registro') {
+                renderRegistro();
+                window.scrollTo(0, 0);
+                document.documentElement.scrollTop = 0;
+                document.body.scrollTop = 0;
+                targetView.scrollTop = 0;
+            }
+            targetView.classList.remove('hidden');
+        }
+
+        function setSolicitudesFilter(filter) {
+            AppState.solicitudesFilter = filter;
+            renderSolicitudes();
+        }
+
+        function actualizarBotonesSolicitudes() {
+            const pendientes = document.getElementById('solicitudes-pendientes');
+            const revisadas = document.getElementById('solicitudes-revisadas');
+            const pendingActive = AppState.solicitudesFilter === 'pending';
+
+            pendientes.className = `rounded-lg px-4 py-2 text-sm font-semibold ${pendingActive ? 'bg-brand-600 text-white' : 'bg-zinc-900 text-zinc-300'}`;
+            revisadas.className = `rounded-lg px-4 py-2 text-sm font-semibold ${pendingActive ? 'bg-zinc-900 text-zinc-300' : 'bg-brand-600 text-white'}`;
+        }
+
+        function formatoFechaSolicitud(value) {
+            if (!value) return '-';
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('es-CL');
+        }
+
+        async function renderSolicitudes() {
+            if (!isManagementAccess()) return;
+
+            const lista = document.getElementById('solicitudes-lista');
+            const vacio = document.getElementById('solicitudes-vacio');
+            actualizarBotonesSolicitudes();
+            lista.innerHTML = '';
+
+            let query = supabaseClient
+                .from('registration_requests')
+                .select('id, full_name, email, status, submitted_at, reviewed_at')
+                .order('submitted_at', { ascending: false });
+
+            if (AppState.solicitudesFilter === 'pending') {
+                query = query.eq('status', 'pending');
+            } else {
+                query = query.eq('status', 'approved');
+            }
+
+            const { data: solicitudes, error } = await query;
+            if (error) {
+                console.error('No se pudieron cargar las solicitudes:', error);
+                vacio.classList.remove('hidden');
+                showToast('Error', 'No se pudieron cargar las solicitudes. Ejecuta la configuración de Supabase.', 'fa-circle-exclamation');
+                return;
+            }
+
+            vacio.classList.toggle('hidden', solicitudes.length > 0);
+            solicitudes.forEach((solicitud) => {
+                const row = document.createElement('tr');
+                const nameCell = document.createElement('td');
+                const emailCell = document.createElement('td');
+                const dateCell = document.createElement('td');
+                const statusCell = document.createElement('td');
+                const actionsCell = document.createElement('td');
+
+                [nameCell, emailCell, dateCell, statusCell, actionsCell].forEach((cell) => {
+                    cell.className = 'px-4 py-4';
+                    row.appendChild(cell);
+                });
+                actionsCell.classList.add('text-right');
+                nameCell.textContent = solicitud.full_name;
+                emailCell.textContent = solicitud.email;
+                dateCell.textContent = formatoFechaSolicitud(solicitud.submitted_at);
+                statusCell.textContent = solicitud.status === 'approved' ? 'Habilitada' : 'Pendiente';
+
+                if (solicitud.status === 'pending') {
+                    const approveButton = document.createElement('button');
+                    approveButton.type = 'button';
+                    approveButton.className = 'mr-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white';
+                    approveButton.textContent = 'Aprobar';
+                    approveButton.addEventListener('click', () => revisarSolicitud(solicitud.id, 'approved'));
+
+                    const rejectButton = document.createElement('button');
+                    rejectButton.type = 'button';
+                    rejectButton.className = 'rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white';
+                    rejectButton.textContent = 'Rechazar';
+                    rejectButton.addEventListener('click', () => revisarSolicitud(solicitud.id, 'rejected'));
+
+                    actionsCell.append(approveButton, rejectButton);
+                } else {
+                    const revokeButton = document.createElement('button');
+                    revokeButton.type = 'button';
+                    revokeButton.className = 'rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white';
+                    revokeButton.textContent = 'Eliminar acceso';
+                    revokeButton.addEventListener('click', () => eliminarAccesoSolicitud(solicitud.id, solicitud.full_name));
+                    actionsCell.appendChild(revokeButton);
+                }
+                lista.appendChild(row);
+            });
+        }
+
+        async function revisarSolicitud(requestId, status) {
+            const action = status === 'approved' ? 'aprobar' : 'rechazar';
+            const { error } = await supabaseClient.rpc('review_registration_request', {
+                p_request_id: requestId,
+                p_status: status
+            });
+            if (error) {
+                console.error(`No se pudo ${action} la solicitud:`, error);
+                showToast('Error', `No se pudo ${action} la solicitud.`, 'fa-circle-exclamation');
+                return;
+            }
+
+            showToast('Solicitud actualizada', status === 'approved'
+                ? 'La cuenta fue aprobada y ya puede ingresar.'
+                : 'La solicitud fue rechazada.', 'fa-circle-check');
+            await renderSolicitudes();
+        }
+
+        async function eliminarAccesoSolicitud(requestId, fullName) {
+            if (!window.confirm(`¿Eliminar el acceso de ${fullName}? Esta persona ya no podrá ingresar.`)) {
+                return;
+            }
+
+            const { error } = await supabaseClient.rpc('revoke_registration_access', {
+                p_request_id: requestId
+            });
+            if (error) {
+                console.error('No se pudo eliminar el acceso:', error);
+                showToast('Error', 'No se pudo eliminar el acceso del usuario.', 'fa-circle-exclamation');
+                return;
+            }
+
+            showToast('Acceso eliminado', 'La cuenta ya no podrá ingresar a la aplicación.', 'fa-circle-check');
+            await renderSolicitudes();
+        }
+
+        function obtenerClientes() {
+            let clientesGuardados = [];
+            try {
+                clientesGuardados = JSON.parse(localStorage.getItem('multiservicClientes') || '[]');
+            } catch (error) {
+                console.warn('No se pudieron leer los clientes guardados:', error);
+            }
+
+            const clientesPorRut = new Map();
+            [...clientesGuardados, ...VirtualSupabase.certificates.map((cert) => ({
+                nombre: cert.cliente,
+                rut: cert.rut,
+                direccion: cert.direccion || '-',
+                contacto: '-',
+            }))].forEach((cliente) => {
+                const clave = (cliente.rut || cliente.nombre || '').trim().toLowerCase();
+                if (clave && !clientesPorRut.has(clave)) clientesPorRut.set(clave, cliente);
+            });
+            return Array.from(clientesPorRut.values());
+        }
+
+        function renderClientes() {
+            const lista = document.getElementById('clientes-lista');
+            const vacio = document.getElementById('clientes-vacio');
+            const clientes = obtenerClientes();
+            lista.innerHTML = '';
+            vacio.classList.toggle('hidden', clientes.length > 0);
+
+            clientes.forEach((cliente, index) => {
+                const row = document.createElement('tr');
+                row.className = 'cursor-pointer transition-colors hover:bg-zinc-900/60';
+                row.tabIndex = 0;
+                row.setAttribute('role', 'button');
+                row.setAttribute('aria-label', `Ver historial de ${cliente.nombre || 'cliente'}`);
+                row.innerHTML = `
+                    <td class="px-4 py-4 text-zinc-500">${index + 1}</td>
+                    <td class="px-4 py-4 font-semibold text-brand-300">${cliente.nombre || '-'}</td>
+                    <td class="px-4 py-4">${cliente.rut || '-'}</td>
+                    <td class="px-4 py-4">${cliente.direccion || '-'}</td>
+                `;
+                lista.appendChild(row);
+
+                const historyRow = document.createElement('tr');
+                historyRow.className = 'hidden cliente-historial-row';
+                historyRow.innerHTML = `<td colspan="4" class="px-4 py-4"><div class="cliente-historial"></div></td>`;
+                lista.appendChild(historyRow);
+
+                const toggleHistory = () => {
+                    const isHidden = historyRow.classList.toggle('hidden');
+                    lista.querySelectorAll('tr.cliente-fila-activa').forEach((activeRow) => activeRow.classList.remove('cliente-fila-activa'));
+                    if (!isHidden) {
+                        row.classList.add('cliente-fila-activa');
+                        renderClienteHistorial(historyRow.querySelector('.cliente-historial'), cliente);
+                        historyRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                };
+                row.addEventListener('click', toggleHistory);
+                row.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleHistory();
+                    }
+                });
+            });
+        }
+
+        function renderClienteHistorial(container, cliente) {
+            const rutCliente = (cliente.rut || '').trim().toLowerCase();
+            const nombreCliente = (cliente.nombre || '').trim().toLowerCase();
+            const registros = VirtualSupabase.certificates
+                .filter((cert) => {
+                    const rut = (cert.rut || '').trim().toLowerCase();
+                    const nombre = (cert.cliente || '').trim().toLowerCase();
+                    return (rutCliente && rut === rutCliente) || (!rutCliente && nombre === nombreCliente);
+                })
+                .sort((first, second) => new Date(second.created_at || 0) - new Date(first.created_at || 0));
+
+            const recientes = registros.slice(0, 5);
+            container.innerHTML = `
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <div class="cliente-historial-titulo text-sm font-bold uppercase tracking-wider">Historial de ${cliente.nombre || 'cliente'}</div>
+                        <div class="cliente-historial-subtitulo mt-1 text-sm">${registros.length} ${registros.length === 1 ? 'registro' : 'registros'} del cliente</div>
+                    </div>
+                    <span class="cliente-historial-badge rounded-full px-3 py-1 text-xs font-semibold">Últimos ${recientes.length}</span>
+                </div>
+                ${recientes.length ? `
+                    <div class="cliente-historial-tabla overflow-x-auto">
+                        <table class="w-full min-w-[680px] text-left text-sm">
+                            <thead class="text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="text-left">Orden de trabajo</th>
+                                    <th class="text-left">Patente</th>
+                                    <th class="text-left">Equipo</th>
+                                    <th class="text-left">Fecha certificado</th>
+                                    <th class="text-left">Fecha de registro</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-200">
+                                ${recientes.map((cert) => `
+                                    <tr>
+                                        <td>${cert.orden_trabajo || '-'}</td>
+                                        <td>${cert.patente || cert.patente_normalizada || '-'}</td>
+                                        <td>${[cert.equipo, cert.marca].filter(Boolean).join(' ') || '-'}</td>
+                                        <td>${cert.fecha_cert || '-'}</td>
+                                        <td>${cert.created_at ? new Date(cert.created_at).toLocaleDateString('es-CL') : '-'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : '<div class="cliente-historial-vacio rounded-xl p-6 text-center text-sm">Este cliente todavía no tiene registros de torque.</div>'}
+            `;
+        }
+
+        function guardarCliente(event) {
+            event.preventDefault();
+            const cliente = {
+                nombre: document.getElementById('cliente-nombre').value.trim(),
+                rut: document.getElementById('cliente-rut').value.trim(),
+                direccion: document.getElementById('cliente-direccion').value.trim(),
+                contacto: document.getElementById('cliente-contacto').value.trim(),
+            };
+
+            const clientes = JSON.parse(localStorage.getItem('multiservicClientes') || '[]');
+            const clienteExistente = clientes.findIndex((item) => item.rut.toLowerCase() === cliente.rut.toLowerCase());
+            if (clienteExistente >= 0) clientes[clienteExistente] = cliente;
+            else clientes.push(cliente);
+            localStorage.setItem('multiservicClientes', JSON.stringify(clientes));
+            document.getElementById('form-cliente').reset();
+            renderClientes();
+            showToast('Éxito', 'Cliente guardado correctamente.', 'fa-circle-check');
+        }
+
+        function registrarClienteDesdeRegistro(record) {
+            const clientes = JSON.parse(localStorage.getItem('multiservicClientes') || '[]');
+            const rut = (record.rut || '').trim().toLowerCase();
+            if (!rut || clientes.some((cliente) => (cliente.rut || '').trim().toLowerCase() === rut)) return;
+
+            clientes.push({
+                nombre: record.cliente,
+                rut: record.rut,
+                direccion: record.direccion,
+                contacto: '-',
+            });
+            localStorage.setItem('multiservicClientes', JSON.stringify(clientes));
+        }
+
+        function setClienteSugerenciasVisible(visible) {
+            const sugerencias = document.getElementById('clientes-sugerencias');
+            const pasoCliente = document.getElementById('paso-datos-cliente');
+            if (!sugerencias) return;
+            sugerencias.classList.toggle('hidden', !visible);
+            pasoCliente?.classList.toggle('paso-cliente-autocomplete', visible);
+        }
+
+        function setupClienteAutocomplete() {
+            const input = document.getElementById('input-cliente');
+            const sugerencias = document.getElementById('clientes-sugerencias');
+            if (!input || !sugerencias || input.dataset.autocompleteReady === 'true') return;
+            input.dataset.autocompleteReady = 'true';
+
+            input.addEventListener('input', () => {
+                renderClienteSugerencias(input.value);
+            });
+            input.addEventListener('focus', () => {
+                if (input.value.trim().length >= 3) {
+                    renderClienteSugerencias(input.value);
+                } else {
+                    setClienteSugerenciasVisible(false);
+                }
+            });
+            input.addEventListener('blur', () => {
+                setTimeout(() => setClienteSugerenciasVisible(false), 120);
+            });
+            document.addEventListener('click', (event) => {
+                if (!input.parentElement.contains(event.target)) setClienteSugerenciasVisible(false);
+            });
+        }
+
+        function renderClienteSugerencias(texto) {
+            const input = document.getElementById('input-cliente');
+            const sugerencias = document.getElementById('clientes-sugerencias');
+            if (!input || !sugerencias) return;
+            const termino = texto.trim().toLowerCase();
+            sugerencias.innerHTML = '';
+
+            if (termino.length < 3) {
+                setClienteSugerenciasVisible(false);
+                return;
+            }
+
+            const clientes = obtenerClientes().filter((cliente) => {
+                const nombre = (cliente.nombre || '').toLowerCase();
+                return nombre.includes(termino);
+            });
+
+            if (!clientes.length) {
+                setClienteSugerenciasVisible(false);
+                return;
+            }
+
+            clientes.slice(0, 8).forEach((cliente) => {
+                const opcion = document.createElement('button');
+                opcion.type = 'button';
+                opcion.className = 'block w-full border-b px-4 py-3 text-left last:border-b-0';
+                opcion.innerHTML = `<span class="block font-bold">${cliente.nombre || '-'}</span><span class="block text-xs">${cliente.rut || '-'}</span>`;
+                opcion.addEventListener('mousedown', (event) => {
+                    event.preventDefault();
+                    seleccionarCliente(cliente);
+                });
+                opcion.addEventListener('click', () => seleccionarCliente(cliente));
+                sugerencias.appendChild(opcion);
+            });
+            setClienteSugerenciasVisible(true);
+        }
+
+        function seleccionarCliente(cliente) {
+            document.getElementById('input-cliente').value = cliente.nombre || '';
+            document.getElementById('input-rut').value = cliente.rut || '';
+            document.getElementById('input-direccion').value = cliente.direccion || '';
+            setClienteSugerenciasVisible(false);
+        }
+
+        function renderRegistro() {
+            const lista = document.getElementById('registro-lista');
+            const vacio = document.getElementById('registro-vacio');
+            lista.innerHTML = '';
+            registroActionRows.clear();
+            vacio.classList.toggle('hidden', VirtualSupabase.certificates.length > 0);
+
+            VirtualSupabase.certificates.forEach((cert, index) => {
+                const row = document.createElement('tr');
+                row.className = 'cursor-pointer hover:bg-zinc-900/60 transition-colors';
+                row.tabIndex = 0;
+                row.setAttribute('role', 'button');
+                row.setAttribute('aria-label', `Seleccionar registro de ${cert.cliente || 'cliente'}`);
+                row.addEventListener('click', () => seleccionarRegistro(cert.id));
+                row.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        seleccionarRegistro(cert.id);
+                    }
+                });
+                row.innerHTML = `
+                    <td class="px-4 py-4 text-zinc-500">${VirtualSupabase.certificates.length - index}</td>
+                    <td class="px-4 py-4 font-semibold">${cert.cliente || '-'}</td>
+                    <td class="px-4 py-4">${cert.orden_trabajo || '-'}</td>
+                    <td class="px-4 py-4 font-medium text-brand-300">${cert.patente || cert.patente_normalizada || '-'}</td>
+                    <td class="px-4 py-4">${cert.equipo || '-'} ${cert.marca || ''}</td>
+                    <td class="px-4 py-4">${cert.fecha_cert || '-'}</td>
+                    <td class="px-4 py-4"><span class="inline-flex rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-400">EMITIDO</span></td>
+                    <td class="px-4 py-4">${new Date(cert.created_at).toLocaleDateString('es-CL')}</td>
+                `;
+                lista.appendChild(row);
+
+                const soloInforme = isPersonalAccess();
+                const actionRow = document.createElement('tr');
+                actionRow.className = 'registro-actions-row hidden bg-zinc-900/40';
+                actionRow.innerHTML = `
+                    <td colspan="8" class="px-4 py-3">
+                        <div class="flex flex-wrap justify-end gap-2">
+                            <button type="button" onclick="visualizarRegistroSeleccionado()" class="registro-accion-btn rounded-lg px-4 py-1.5 text-xs font-semibold">Informe</button>
+                            ${soloInforme ? '' : `
+                            <button type="button" onclick="descargarInformeSeleccionado()" class="registro-accion-btn informe-descarga ${cert.informe ? '' : 'hidden'} rounded-lg px-4 py-1.5 text-xs font-semibold">Descargar inf.</button>
+                            <button type="button" onclick="descargarRegistroSeleccionado()" class="registro-accion-btn rounded-lg px-4 py-1.5 text-xs font-semibold">Descargar</button>
+                            <button type="button" onclick="imprimirRegistroSeleccionado()" class="registro-accion-btn rounded-lg px-4 py-1.5 text-xs font-semibold">Imprimir</button>`}
+                        </div>
+                    </td>
+                `;
+                lista.appendChild(actionRow);
+                registroActionRows.set(cert.id, actionRow);
+            });
+        }
+
+        let registroSeleccionadoId = null;
+        const registroActionRows = new Map();
+
+        function seleccionarRegistro(id) {
+            const cert = buscarRegistro(id);
+            if (!cert) return;
+            const actionRow = registroActionRows.get(id);
+            if (!actionRow) return;
+
+            registroActionRows.forEach((row) => row.classList.add('hidden'));
+            if (registroSeleccionadoId === id) {
+                registroSeleccionadoId = null;
+                return;
+            }
+
+            registroSeleccionadoId = id;
+            actionRow.classList.remove('hidden');
+            actionRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function buscarRegistro(id) {
+            const cert = VirtualSupabase.certificates.find((record) => record.id === id);
+            return cert;
+        }
+
+        function obtenerRegistroSeleccionado() {
+            return registroSeleccionadoId ? buscarRegistro(registroSeleccionadoId) : null;
+        }
+
+        function descargarPdf(pdf, nombreArchivo) {
+            const blob = pdf.output('blob');
+            if (typeof navigator.msSaveOrOpenBlob === 'function') {
+                navigator.msSaveOrOpenBlob(blob, nombreArchivo);
+                return;
+            }
+
+            const url = URL.createObjectURL(blob);
+            const enlace = document.createElement('a');
+            enlace.href = url;
+            enlace.rel = 'noopener';
+            enlace.style.display = 'none';
+            document.body.appendChild(enlace);
+            if ('download' in enlace) {
+                enlace.download = nombreArchivo;
+                enlace.click();
+            } else {
+                window.open(url, '_blank', 'noopener');
+            }
+            enlace.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function obtenerMarcasAguaDataUrl(imagen) {
+            if (!imagen || !imagen.complete || !imagen.naturalWidth) return null;
+            const crearMarca = (opacidad) => {
+                const marcaCanvas = document.createElement('canvas');
+                const maxDimension = 900;
+                const scale = Math.min(1, maxDimension / Math.max(imagen.naturalWidth, imagen.naturalHeight));
+                marcaCanvas.width = Math.round(imagen.naturalWidth * scale);
+                marcaCanvas.height = Math.round(imagen.naturalHeight * scale);
+                const marcaContext = marcaCanvas.getContext('2d');
+                marcaContext.globalAlpha = opacidad;
+                marcaContext.drawImage(imagen, 0, 0, marcaCanvas.width, marcaCanvas.height);
+                return marcaCanvas.toDataURL('image/jpeg', 0.65);
+            };
+            return {
+                normal: crearMarca(0.28),
+                segundaHoja: crearMarca(0.38),
+                aspectRatio: imagen.naturalWidth / imagen.naturalHeight
+            };
+        }
+
+        function cargarFotoDriveComoDataUrl(fileId) {
+            return new Promise((resolve, reject) => {
+                const callbackName = `drivePhoto_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+                const script = document.createElement('script');
+                const timeout = setTimeout(cleanup, 15000);
+
+                function cleanup() {
+                    clearTimeout(timeout);
+                    delete window[callbackName];
+                    script.remove();
+                }
+
+                window[callbackName] = (response) => {
+                    cleanup();
+                    if (!response.ok || !response.dataUrl) {
+                        reject(new Error(response.error || 'No se pudo cargar una fotografía desde Google Drive.'));
+                        return;
+                    }
+                    resolve(response.dataUrl);
+                };
+
+                script.onerror = () => {
+                    cleanup();
+                    reject(new Error('No se pudo conectar con Google Drive.'));
+                };
+                script.src = `${GOOGLE_DRIVE_UPLOAD_URL}?action=image&fileId=${encodeURIComponent(fileId)}&callback=${callbackName}`;
+                document.head.appendChild(script);
+            });
+        }
+
+        async function prepararFotosInformeParaPdf(informe) {
+            const fotos = informe.fotos || [];
+            return Promise.all(fotos.map(async (foto) => {
+                const fileIdMatch = (foto.src || '').match(/[?&]id=([^&]+)/);
+                if (!fileIdMatch) return foto;
+                return { ...foto, src: await cargarFotoDriveComoDataUrl(fileIdMatch[1]) };
+            }));
+        }
+
+        function recortarCanvasVacios(canvas) {
+            const contexto = canvas.getContext('2d');
+            if (!contexto) return canvas;
+            const { width, height } = canvas;
+            if (!width || !height) return canvas;
+            const imageData = contexto.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            const esBlanco = (x, y) => {
+                const i = (y * width + x) * 4;
+                const alpha = data[i + 3];
+                if (alpha <= 8) return true;
+                return data[i] >= 248 && data[i + 1] >= 248 && data[i + 2] >= 248;
+            };
+            const filaTieneContenido = (y) => {
+                for (let x = 0; x < width; x += 4) {
+                    if (!esBlanco(x, y)) return true;
+                }
+                return false;
+            };
+            const columnaTieneContenido = (x, top, bottom) => {
+                for (let y = top; y <= bottom; y += 4) {
+                    if (!esBlanco(x, y)) return true;
+                }
+                return false;
+            };
+
+            let top = 0;
+            while (top < height && !filaTieneContenido(top)) top += 1;
+            let bottom = height - 1;
+            while (bottom > top && !filaTieneContenido(bottom)) bottom -= 1;
+            if (bottom <= top) return canvas;
+
+            let left = 0;
+            while (left < width && !columnaTieneContenido(left, top, bottom)) left += 1;
+            let right = width - 1;
+            while (right > left && !columnaTieneContenido(right, top, bottom)) right -= 1;
+
+            const cropWidth = Math.max(1, right - left + 1);
+            const cropHeight = Math.max(1, bottom - top + 1);
+            const recortado = document.createElement('canvas');
+            recortado.width = cropWidth;
+            recortado.height = cropHeight;
+            recortado.getContext('2d').drawImage(canvas, left, top, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
+            return recortado;
+        }
+
+        function agregarCertificadoAlPdf(pdf, canvas) {
+            const margen = PDF_CARTA.margen;
+            const maxAncho = PDF_ANCHO_CONTENIDO;
+            const maxAlto = PDF_ALTO_CONTENIDO;
+            const recortado = recortarCanvasVacios(canvas);
+            const imageData = recortado.toDataURL('image/png');
+
+            let renderAncho = maxAncho;
+            let renderAlto = (recortado.height / recortado.width) * renderAncho;
+            if (renderAlto > maxAlto) {
+                renderAlto = maxAlto;
+                renderAncho = (recortado.width / recortado.height) * renderAlto;
+            }
+
+            const escalaExtra = Math.min(
+                PDF_ESCALA_CERTIFICADO,
+                maxAncho / renderAncho,
+                maxAlto / renderAlto
+            );
+            renderAncho *= escalaExtra;
+            renderAlto *= escalaExtra;
+
+            const x = margen + ((maxAncho - renderAncho) / 2);
+            const y = margen + ((maxAlto - renderAlto) / 2);
+            pdf.addImage(imageData, 'PNG', x, y, renderAncho, renderAlto);
+        }
+
+        async function capturarCanvasCertificado(printArea) {
+            const alturaContenido = Math.max(
+                printArea.scrollHeight,
+                printArea.offsetHeight,
+                printArea.getBoundingClientRect().height
+            );
+            return html2canvas(printArea, {
+                scale: PDF_HTML2CANVAS_SCALE_CERTIFICADO,
+                useCORS: true,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                height: Math.ceil(alturaContenido),
+                windowHeight: Math.ceil(alturaContenido),
+                scrollY: 0,
+                scrollX: 0
+            });
+        }
+
+        function agregarCanvasEnPaginas(pdf, canvas, area, marcasAgua = null, imageFormat = 'PNG') {
+            const pageWidth = PDF_CARTA.ancho;
+            const pageHeight = PDF_CARTA.alto;
+            const sideMargin = PDF_CARTA.margen;
+            const topMargin = PDF_CARTA.margen;
+            const bottomMargin = PDF_CARTA.margen;
+            const contentWidth = PDF_ANCHO_CONTENIDO;
+            const areaRect = area.getBoundingClientRect();
+            const protectedRegions = Array.from(area.querySelectorAll('[data-pdf-keep-together]'))
+                .map((element) => {
+                    const rect = element.getBoundingClientRect();
+                    return {
+                        top: (rect.top - areaRect.top) * canvas.width / areaRect.width,
+                        bottom: (rect.bottom - areaRect.top) * canvas.width / areaRect.width
+                    };
+                });
+            let sourceTop = 0;
+            let pageNumber = 0;
+
+            while (sourceTop < canvas.height) {
+                const contentHeight = pageHeight - topMargin - bottomMargin;
+                const sourcePageHeight = (contentHeight * canvas.width) / contentWidth;
+                const pageEnd = sourceTop + sourcePageHeight;
+                const splitRegion = protectedRegions.find((region) =>
+                    region.top >= sourceTop &&
+                    region.top < pageEnd &&
+                    region.bottom > pageEnd &&
+                    region.top > sourceTop
+                );
+                let sourceHeight = Math.min(
+                    splitRegion ? splitRegion.top - sourceTop : sourcePageHeight,
+                    canvas.height - sourceTop
+                );
+                if (sourceHeight <= 0) break;
+                const restante = canvas.height - sourceTop;
+                if (restante - sourceHeight > 0 && (restante - sourceHeight) < (sourcePageHeight * 0.04)) {
+                    sourceHeight = restante;
+                }
+                if (sourceHeight < (sourcePageHeight * 0.03) && pageNumber > 0) break;
+                const pageCanvas = document.createElement('canvas');
+                pageCanvas.width = canvas.width;
+                pageCanvas.height = Math.ceil(sourceHeight);
+                const pageContext = pageCanvas.getContext('2d');
+                pageContext.fillStyle = '#ffffff';
+                pageContext.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+                pageContext.drawImage(canvas, 0, sourceTop, canvas.width, sourceHeight, 0, 0, pageCanvas.width, pageCanvas.height);
+
+                if (pageNumber > 0) pdf.addPage();
+                const renderedHeight = (pageCanvas.height * contentWidth) / pageCanvas.width;
+                const isJpeg = imageFormat === 'JPEG';
+                const imageData = isJpeg
+                    ? pageCanvas.toDataURL('image/jpeg', 1)
+                    : pageCanvas.toDataURL('image/png');
+
+                if (marcasAgua) {
+                    const marcaWidth = 135;
+                    const marcaHeight = marcaWidth / marcasAgua.aspectRatio;
+                    const marcaY = (pageHeight * 0.38) - (marcaHeight / 2);
+                    const marcaDataUrl = pageNumber === 0 ? marcasAgua.normal : marcasAgua.segundaHoja;
+                    pdf.addImage(marcaDataUrl, 'JPEG', (pageWidth - marcaWidth) / 2, marcaY, marcaWidth, marcaHeight);
+                }
+
+                pdf.addImage(
+                    imageData,
+                    imageFormat,
+                    sideMargin,
+                    topMargin,
+                    contentWidth,
+                    renderedHeight
+                );
+                sourceTop += sourceHeight;
+                pageNumber++;
+            }
+        }
+
+        function visualizarRegistroSeleccionado() {
+            const cert = obtenerRegistroSeleccionado();
+            if (cert) visualizarRegistro(cert.id);
+        }
+
+        function descargarRegistroSeleccionado() {
+            const cert = obtenerRegistroSeleccionado();
+            if (!cert) return;
+            if (!window.html2canvas || !window.jspdf) {
+                showToast('Error', 'No se pudo cargar el generador de PDF.', 'fa-circle-exclamation');
+                return;
+            }
+
+            const printArea = document.getElementById('print-area');
+            const previousStyle = printArea.getAttribute('style');
+            const previousClass = printArea.className;
+            
+            imprimirTicket(cert, false);
+            
+            // Forzar renderizado sacándolo del 'hidden' pero fuera de la vista
+            printArea.className = '';
+            printArea.style.cssText = estiloRenderPdfCertificado();
+            
+            showToast('Procesando PDF', 'Generando archivo de registro...', 'fa-spinner animate-spin');
+
+            setTimeout(async () => {
+                try {
+                    await prepararImagenesLocalesParaPdf(printArea);
+                    const canvas = await capturarCanvasCertificado(printArea);
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF('p', 'mm', 'letter');
+                    agregarCertificadoAlPdf(pdf, canvas);
+                    descargarPdf(pdf, `Registro-${cert.orden_trabajo || cert.id}.pdf`);
+                    showToast('Descarga Completa', 'Documento PDF guardado.', 'fa-circle-check');
+                } catch (error) {
+                    console.error('Error al generar el PDF del registro:', error);
+                    showToast('Error', 'No se pudo descargar el PDF.', 'fa-circle-exclamation');
+                } finally {
+                    if (previousStyle === null) printArea.removeAttribute('style');
+                    else printArea.setAttribute('style', previousStyle);
+                    printArea.className = previousClass;
+                }
+            }, 300); // El delay permite que el navegador calcule la capa visible
+        }
+
+        async function imprimirRegistroSeleccionado() {
+            const cert = obtenerRegistroSeleccionado();
+            if (cert) await imprimirRegistro(cert.id);
+        }
+
+        function blobToDataUrl(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('No se pudo convertir la imagen local a data URL.'));
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        async function prepararImagenesLocalesParaPdf(container) {
+            if (!container) return;
+            const imgs = Array.from(container.querySelectorAll('img[src]'));
+            for (const img of imgs) {
+                const src = (img.getAttribute('src') || '').trim();
+                if (!src || src.startsWith('data:') || src.startsWith('blob:')) continue;
+                const assetName = decodeURIComponent(src.split('/').pop() || '');
+                const assetKey = {
+                    'SPEED.png': 'logo',
+                    'firma informe.jpg': 'firmaInforme',
+                    'FIRMA2.jpg': 'firmaCertificado',
+                    'marca de agua.jpg': 'marcaAgua',
+                    'QR.png': 'qr',
+                    'qr.png': 'qr'
+                }[assetName];
+                const sourceUrl = assetKey ? PDF_ASSETS[assetKey] : src;
+
+                try {
+                    const response = await fetch(sourceUrl, { cache: 'no-store' });
+                    if (!response.ok) throw new Error(`No se pudo cargar ${sourceUrl}`);
+                    const blob = await response.blob();
+                    const dataUrl = await blobToDataUrl(blob);
+                    img.src = dataUrl;
+                } catch (error) {
+                    throw new Error(`No se pudo incrustar la imagen ${sourceUrl}. Verifica que exista en certificate-assets y que el bucket sea público.`);
+                }
+            }
+
+            await Promise.all(Array.from(container.querySelectorAll('img[src]')).map((img) => {
+                if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+                return new Promise((resolve) => {
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                });
+            }));
+        }
+
+        async function generarPdfCertificado(cert) {
+            const printArea = document.getElementById('print-area');
+            const previousStyle = printArea.getAttribute('style');
+            const previousClass = printArea.className;
+            try {
+                imprimirTicket(cert, false);
+                printArea.className = '';
+                printArea.style.cssText = estiloRenderPdfCertificado();
+                await new Promise((resolve) => setTimeout(resolve, 100));
+                await prepararImagenesLocalesParaPdf(printArea);
+                const canvas = await capturarCanvasCertificado(printArea);
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'letter');
+                agregarCertificadoAlPdf(pdf, canvas);
+                return pdf.output('blob');
+            } finally {
+                if (previousStyle === null) printArea.removeAttribute('style');
+                else printArea.setAttribute('style', previousStyle);
+                printArea.className = previousClass;
+            }
+        }
+
+        async function guardarPdfCertificado(cert) {
+            const pdfBlob = await generarPdfCertificado(cert);
+            const fileName = `certificados/${cert.id}/certificado-${cert.num_certificado || cert.id}.pdf`;
+            const { error: uploadError } = await supabaseClient.storage
+                .from('certificates-pdf')
+                .upload(fileName, pdfBlob, { contentType: 'application/pdf', upsert: true });
+            if (uploadError) throw uploadError;
+
+            const fileRecord = {
+                certificate_id: cert.id,
+                file_type: 'certificate_pdf',
+                storage_bucket: 'certificates-pdf',
+                storage_path: fileName,
+                original_name: fileName.split('/').pop(),
+                mime_type: 'application/pdf',
+                file_size: pdfBlob.size,
+                sort_order: 0
+            };
+            const { data: existingFile, error: findError } = await supabaseClient
+                .from('certificate_files')
+                .select('id')
+                .eq('certificate_id', cert.id)
+                .eq('file_type', 'certificate_pdf')
+                .maybeSingle();
+            if (findError) throw findError;
+            const { error: fileError } = existingFile
+                ? await supabaseClient.from('certificate_files').update(fileRecord).eq('id', existingFile.id)
+                : await supabaseClient.from('certificate_files').insert(fileRecord);
+            if (fileError) throw fileError;
+        }
+
+        function visualizarRegistro(id) {
+            const cert = buscarRegistro(id);
+            if (!cert) return;
+            const informe = cert.informe || {};
+            const isSaved = Object.keys(informe).length > 0;
+            
+            // Actualización para el nuevo layout de solo lectura
+            document.getElementById('informe-cliente').textContent = informe.cliente || cert.cliente || '-';
+            document.getElementById('informe-direccion').textContent = cert.direccion || '-';
+            document.getElementById('informe-rut').textContent = cert.rut || '-';
+            document.getElementById('informe-orden').textContent = cert.orden_trabajo || '-';
+            document.getElementById('informe-equipo').textContent = informe.equipo || cert.equipo || '-';
+            document.getElementById('informe-marca').textContent = informe.marca || cert.marca || '-';
+            document.getElementById('informe-anio').textContent = cert.anio || '-';
+            document.getElementById('informe-modelo').textContent = informe.modelo || cert.modelo || '-';
+            document.getElementById('informe-patente').textContent = informe.patente || cert.patente || '-';
+            
+            document.getElementById('informe-problemas').value = informe.problemas || '';
+            document.getElementById('informe-proceso').value = informe.proceso || '';
+            document.getElementById('informe-recomendaciones').value = informe.recomendaciones || '';
+            
+            // Renderizar slots dinámicos de fotos
+            const inicialesContainer = document.getElementById('informe-fotos-iniciales');
+            const marcajeContainer = document.getElementById('informe-fotos-marcaje');
+            inicialesContainer.innerHTML = '';
+            marcajeContainer.innerHTML = '';
+            informePhotoCounter = 0; // Resetear contador
+            const titulosIniciales = ['INGRESO DEL EQUIPO', 'KILOMETRAJE', '', 'PROCEDIMIENTO APLICADO', 'TORQUE DE RUEDA'];
+            let cantidadIniciales = 0;
+            let cantidadMarcaje = 0;
+            
+            if (isSaved && informe.fotos && informe.fotos.length > 0) {
+                informe.fotos.forEach((fotoObj, idx) => {
+                    // Soporte para estructura antigua vs la nueva {title, src}
+                    const target = idx < 5 ? 'iniciales' : 'marcaje';
+                    if (target === 'iniciales') cantidadIniciales++;
+                    else cantidadMarcaje++;
+                    if (typeof fotoObj === 'string') {
+                        addInformePhotoSlot(`FOTOGRAFÍA ${idx + 1}`, fotoObj, target);
+                    } else {
+                        addInformePhotoSlot(fotoObj.title, fotoObj.src, target);
+                    }
+                });
+                while (cantidadIniciales < titulosIniciales.length) {
+                    addInformePhotoSlot(titulosIniciales[cantidadIniciales], null, 'iniciales');
+                    cantidadIniciales++;
+                }
+                if (!cantidadMarcaje) addInformePhotoSlot('', null, 'marcaje');
+            } else {
+                titulosIniciales.forEach((title) => addInformePhotoSlot(title, null, 'iniciales'));
+                addInformePhotoSlot('', null, 'marcaje');
+            }
+
+            document.getElementById('modal-registro').classList.remove('hidden');
+            
+            // Aplicar el estado de lectura si ya existen datos
+            setInformeMode(isSaved ? 'view' : 'edit');
+        }
+
+        // --- MODO DE VISTA O EDICIÓN DEL INFORME ---
+        function setInformeMode(mode) {
+            const isView = mode === 'view';
+            
+            // Deshabilitar textareas y darles estilo inactivo
+            const textareas = ['informe-problemas', 'informe-proceso', 'informe-recomendaciones'];
+            textareas.forEach(id => {
+                const el = document.getElementById(id);
+                el.readOnly = isView;
+                if(isView) {
+                    el.classList.add('informe-campo-readonly', 'pointer-events-none');
+                } else {
+                    el.classList.remove('informe-campo-readonly', 'pointer-events-none');
+                }
+            });
+
+            // Ocultar botón general de añadir foto
+            const addPhotoBtn = document.getElementById('btn-add-photo-slot');
+            if (addPhotoBtn) addPhotoBtn.classList.toggle('hidden', isView);
+            
+            // Recorrer las fotos insertadas para inhabilitarlas
+            const slots = document.querySelectorAll('.informe-photo-slot');
+            slots.forEach(slot => {
+                const idStr = slot.id.replace('informe-slot-', '');
+                const titleInput = document.getElementById(`informe-foto-title-${idStr}`);
+                const deleteBtn = document.getElementById(`informe-foto-delete-${idStr}`);
+                const imgContainer = document.getElementById(`informe-foto-container-${idStr}`);
+                const overlay = document.getElementById(`informe-foto-overlay-${idStr}`);
+                const preview = document.getElementById(`informe-foto-preview-${idStr}`);
+                
+                if (titleInput) {
+                    titleInput.readOnly = isView;
+                    if(isView) titleInput.classList.add('informe-foto-title-readonly', 'pointer-events-none');
+                    else titleInput.classList.remove('informe-foto-title-readonly', 'pointer-events-none');
+                }
+                
+                if (deleteBtn) deleteBtn.classList.toggle('hidden', isView);
+                
+                if (isView) {
+                    imgContainer.onclick = null;
+                    imgContainer.classList.remove('cursor-pointer');
+                    if (overlay) overlay.classList.add('hidden');
+                    
+                    // Permitir ampliar la foto guardada al hacer clic
+                    if (preview && preview.src && preview.src !== window.location.href) {
+                        imgContainer.onclick = () => {
+                            document.getElementById('expanded-view-img').src = preview.src;
+                            document.getElementById('modal-expanded-image').classList.remove('hidden');
+                        };
+                        imgContainer.classList.add('cursor-zoom-in');
+                    }
+                } else {
+                    // Restaurar función de subir archivo
+                    imgContainer.onclick = () => document.getElementById(`informe-foto-file-${idStr}`).click();
+                    imgContainer.classList.add('cursor-pointer');
+                    imgContainer.classList.remove('cursor-zoom-in');
+                    if (overlay) overlay.classList.remove('hidden');
+                }
+            });
+
+            // Intercambiar botones de acción del footer
+            document.getElementById('btn-editar-informe').classList.toggle('hidden', !isView);
+            document.getElementById('btn-guardar-informe').classList.toggle('hidden', isView);
+        }
+
+        // --- SISTEMA DINÁMICO DE FOTOS ---
+        let informePhotoCounter = 0;
+
+        function addInformePhotoSlot(title = '', src = null, area = 'marcaje') {
+            informePhotoCounter++;
+            const id = informePhotoCounter;
+            const containerId = area === 'iniciales' ? 'informe-fotos-iniciales' : 'informe-fotos-marcaje';
+            const container = document.getElementById(containerId);
+            
+            const slot = document.createElement('div');
+            slot.className = 'informe-photo-slot flex flex-col gap-2 relative group';
+            slot.id = `informe-slot-${id}`;
+            
+            slot.innerHTML = `
+                <div class="flex items-center justify-between mb-1">
+                    <input type="text" id="informe-foto-title-${id}" class="informe-foto-title w-full bg-transparent font-bold text-sm tracking-wide uppercase focus:outline-none placeholder-zinc-400 transition-colors" placeholder="TÍTULO FOTO ${id}" value="${title}" onkeydown="if(event.key==='Enter') event.preventDefault();">
+                </div>
+                
+                <div id="informe-foto-container-${id}" class="informe-foto-dropzone relative w-full aspect-square rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden" onclick="document.getElementById('informe-foto-file-${id}').click()">
+                    <img id="informe-foto-preview-${id}" class="${src ? '' : 'hidden'} absolute inset-0 w-full h-full object-cover z-0" src="${src || ''}">
+                    <div id="informe-foto-overlay-${id}" class="flex flex-col items-center justify-center z-10 transition-colors w-full h-full ${src ? 'informe-foto-overlay-filled opacity-0 group-hover:opacity-100' : 'informe-foto-overlay-empty'}">
+                        <i class="fa-solid fa-camera text-2xl mb-2 font-light"></i>
+                        <span class="text-sm font-medium">Agregar foto ${id}</span>
+                    </div>
+                </div>
+                <input type="file" id="informe-foto-file-${id}" class="hidden" accept="image/*" onchange="handleSingleInformePhoto(this, ${id})">
+                <button type="button" id="informe-foto-delete-${id}" class="absolute top-8 -right-2.5 bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-all shadow-lg scale-90 hover:scale-110 z-20" onclick="document.getElementById('informe-slot-${id}').remove()" title="Eliminar cuadro">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+            
+            container.appendChild(slot);
+
+            const dropzone = document.getElementById(`informe-foto-container-${id}`);
+            const titleInput = document.getElementById(`informe-foto-title-${id}`);
+            const quitarEstadoArrastre = () => dropzone.classList.remove('drag-over');
+            const prevenirNavegacion = (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+            };
+
+            dropzone.addEventListener('dragenter', (event) => {
+                prevenirNavegacion(event);
+                if (!titleInput.readOnly) dropzone.classList.add('drag-over');
+            });
+            dropzone.addEventListener('dragover', (event) => {
+                prevenirNavegacion(event);
+                if (!titleInput.readOnly) {
+                    dropzone.classList.add('drag-over');
+                    event.dataTransfer.dropEffect = 'copy';
+                }
+            });
+            dropzone.addEventListener('dragleave', quitarEstadoArrastre);
+            dropzone.addEventListener('drop', async (event) => {
+                prevenirNavegacion(event);
+                quitarEstadoArrastre();
+                if (titleInput.readOnly) return;
+                const file = Array.from(event.dataTransfer.files || [])
+                    .find((item) => item.type.startsWith('image/'));
+                if (file) await cargarInformePhotoFile(file, id);
+            });
+        }
+
+        async function comprimirFotoInforme(file) {
+            const imageUrl = URL.createObjectURL(file);
+            try {
+                const image = new Image();
+                image.src = imageUrl;
+                await image.decode();
+                const maxDimension = 800;
+                const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(image.naturalWidth * scale);
+                canvas.height = Math.round(image.naturalHeight * scale);
+                canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+                return await new Promise((resolve, reject) => {
+                    canvas.toBlob((blob) => {
+                        if (!blob) {
+                            reject(new Error('No se pudo optimizar la fotografía.'));
+                            return;
+                        }
+                        const baseName = file.name.replace(/\.[^.]+$/, '') || 'foto-informe';
+                        resolve(new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' }));
+                    }, 'image/jpeg', 0.72);
+                });
+            } finally {
+                URL.revokeObjectURL(imageUrl);
+            }
+        }
+
+        async function cargarInformePhotoFile(file, id) {
+            const optimizedFile = await comprimirFotoInforme(file);
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById(`informe-foto-preview-${id}`);
+                preview.src = e.target.result;
+                preview.classList.remove('hidden');
+                const overlay = preview.nextElementSibling;
+                overlay.className = "informe-foto-overlay-filled flex flex-col items-center justify-center z-10 transition-colors w-full h-full opacity-0 group-hover:opacity-100";
+            };
+            document.getElementById(`informe-foto-file-${id}`)._optimizedFile = optimizedFile;
+            reader.readAsDataURL(optimizedFile);
+        }
+
+        async function handleSingleInformePhoto(input, id) {
+            if (input.files && input.files[0]) {
+                await cargarInformePhotoFile(input.files[0], id);
+            }
+        }
+
+        function nombreCarpetaInforme(cert) {
+            const orden = cert.orden_trabajo || 'SIN-OT';
+            const patente = cert.patente || 'SIN-PATENTE';
+            return `${orden}_${patente}_${cert.id}`.replace(/[^a-zA-Z0-9_-]/g, '-');
+        }
+
+        async function subirFotoADrive(cert, file, title, sortOrder) {
+            const fileData = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('No se pudo leer la fotografía seleccionada.'));
+                reader.readAsDataURL(file);
+            });
+            const response = await fetch(GOOGLE_DRIVE_UPLOAD_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    certificateId: cert.id,
+                    folderName: nombreCarpetaInforme(cert),
+                    fileName: file.name || `foto-${sortOrder}.jpg`,
+                    mimeType: file.type || 'image/jpeg',
+                    fileData
+                })
+            });
+            const responseText = await response.text();
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch {
+                result = null;
+            }
+            if (!response.ok) {
+                const detail = result?.error || responseText.slice(0, 180) || `HTTP ${response.status}`;
+                throw new Error(`Google Drive rechazó la fotografía (${response.status}): ${detail}`);
+            }
+            if (!result.ok) throw new Error(result.error || 'No se pudo guardar la fotografía en Google Drive.');
+
+            const { error } = await supabaseClient
+                .from('certificate_files')
+                .insert({
+                    certificate_id: cert.id,
+                    file_type: 'technical_photo',
+                    storage_bucket: 'google-drive',
+                    storage_path: result.folderId || result.folderName || nombreCarpetaInforme(cert),
+                    external_url: result.viewUrl,
+                    external_file_id: result.fileId,
+                    original_name: result.fileName,
+                    mime_type: file.type || 'image/jpeg',
+                    file_size: file.size,
+                    photo_title: title,
+                    sort_order: sortOrder
+                });
+            if (error) {
+                const detail = [error.message, error.details, error.hint, error.code]
+                    .filter(Boolean)
+                    .join(' | ');
+                throw new Error(`Supabase no pudo registrar la fotografía: ${detail || JSON.stringify(error)}`);
+            }
+            return { title, src: `https://drive.google.com/thumbnail?id=${result.fileId}&sz=w1600` };
+        }
+
+        async function generarPdfInforme(informe) {
+            const area = document.getElementById('print-informe');
+            const marcaAgua = area.querySelector('img[aria-hidden="true"]');
+            const previousWatermarkVisibility = marcaAgua ? marcaAgua.style.visibility : '';
+            const previousStyle = area.getAttribute('style');
+            try {
+                const fotosPreparadas = await prepararFotosInformeParaPdf(informe);
+                prepararInformeParaDescarga({ ...informe, fotos: fotosPreparadas });
+                await prepararImagenesLocalesParaPdf(area);
+                area.style.cssText = `${previousStyle || ''}; display: block !important; position: absolute; left: -10000px; top: 0; width: ${PDF_ANCHO_CONTENIDO}mm; background: white;`;
+                const canvas = await html2canvas(area, { scale: 1, useCORS: true, backgroundColor: '#ffffff' });
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'letter');
+                await agregarCanvasEnPaginas(pdf, canvas, area, null, 'JPEG');
+                return pdf.output('blob');
+            } finally {
+                if (marcaAgua) marcaAgua.style.visibility = previousWatermarkVisibility;
+                if (previousStyle === null) area.removeAttribute('style');
+                else area.setAttribute('style', previousStyle);
+            }
+        }
+
+        async function subirPdfInformeADrive(cert, pdfBlob) {
+            const fileData = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('No se pudo preparar el PDF del informe.'));
+                reader.readAsDataURL(pdfBlob);
+            });
+            const response = await fetch(GOOGLE_DRIVE_UPLOAD_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    certificateId: cert.id,
+                    folderName: nombreCarpetaInforme(cert),
+                    fileName: `informe-${cert.num_certificado || cert.id}.pdf`,
+                    mimeType: 'application/pdf',
+                    fileData
+                })
+            });
+            if (!response.ok) throw new Error('Google Drive no aceptó el PDF del informe.');
+            const result = await response.json();
+            if (!result.ok) throw new Error(result.error || 'No se pudo guardar el PDF del informe.');
+            const fileRecord = {
+                certificate_id: cert.id,
+                file_type: 'technical_report_pdf',
+                storage_bucket: 'google-drive',
+                storage_path: result.folderId || result.folderName || nombreCarpetaInforme(cert),
+                external_url: result.downloadUrl,
+                external_file_id: result.fileId,
+                original_name: result.fileName,
+                mime_type: 'application/pdf',
+                file_size: pdfBlob.size,
+                sort_order: 0
+            };
+            const { data: existingFile, error: findError } = await supabaseClient
+                .from('certificate_files')
+                .select('id')
+                .eq('certificate_id', cert.id)
+                .eq('file_type', 'technical_report_pdf')
+                .maybeSingle();
+            if (findError) throw findError;
+            const { error } = existingFile
+                ? await supabaseClient.from('certificate_files').update(fileRecord).eq('id', existingFile.id)
+                : await supabaseClient.from('certificate_files').insert(fileRecord);
+            if (error) throw error;
+            return result.downloadUrl;
+        }
+        // ----------------------------------
+
+        document.getElementById('form-informe').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (AppState.isSavingReport) return;
+            const cert = obtenerRegistroSeleccionado();
+            if (!cert) return;
+            
+            // Recolectar datos de fotos existentes y nuevas
+            const photoSlots = document.querySelectorAll('.informe-photo-slot');
+            const fotosExistentes = [];
+            const fotosNuevas = [];
+            for (const slot of photoSlots) {
+                const idStr = slot.id.replace('informe-slot-', '');
+                const title = document.getElementById(`informe-foto-title-${idStr}`).value.trim();
+                const preview = document.getElementById(`informe-foto-preview-${idStr}`);
+                const fileInput = document.getElementById(`informe-foto-file-${idStr}`);
+                const file = fileInput._optimizedFile || fileInput.files[0];
+                const src = preview.getAttribute('src');
+                
+                if (file) {
+                    fotosNuevas.push({ file, title: title || `FOTOGRAFÍA`, src, sortOrder: fotosExistentes.length + fotosNuevas.length });
+                } else if (src && src !== 'null' && src !== '') {
+                    fotosExistentes.push({ title: title || `FOTOGRAFÍA`, src });
+                }
+            }
+
+            const informeAnterior = cert.informe || {};
+            if (!fotosNuevas.length && !fotosExistentes.length && !informeAnterior.fotos?.length) {
+                showToast('Campos pendientes', 'Agrega al menos una fotografía al informe.', 'fa-triangle-exclamation');
+                return;
+            }
+
+            const informe = {
+                cliente: document.getElementById('informe-cliente').textContent.trim(),
+                direccion: cert.direccion || '',
+                rut: cert.rut || '',
+                orden_trabajo: cert.orden_trabajo || '',
+                equipo: document.getElementById('informe-equipo').textContent.trim(),
+                marca: document.getElementById('informe-marca').textContent.trim(),
+                anio: cert.anio || '',
+                modelo: document.getElementById('informe-modelo').textContent.trim(),
+                patente: document.getElementById('informe-patente').textContent.trim(),
+                problemas: document.getElementById('informe-problemas').value.trim(),
+                proceso: document.getElementById('informe-proceso').value.trim(),
+                recomendaciones: document.getElementById('informe-recomendaciones').value.trim(),
+                updated_at: new Date().toISOString()
+            };
+            const saveButton = document.getElementById('btn-guardar-informe');
+            AppState.isSavingReport = true;
+            saveButton.disabled = true;
+            saveButton.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin mr-2"></i> Guardando...';
+            try {
+                const fotosParaPdf = [...fotosExistentes, ...fotosNuevas]
+                    .map(({ title, src }) => ({ title, src }));
+                const pdfBlob = fotosNuevas.length
+                    ? await generarPdfInforme({ ...informe, fotos: fotosParaPdf })
+                    : null;
+                const fotosSubidas = [];
+                for (const foto of fotosNuevas) {
+                    fotosSubidas.push(await subirFotoADrive(cert, foto.file, foto.title, foto.sortOrder));
+                }
+                const reportResult = await supabaseClient
+                    .from('technical_reports')
+                    .upsert({ ...informe, certificate_id: cert.id }, { onConflict: 'certificate_id' })
+                    .select()
+                    .single();
+                const pdfUrl = pdfBlob
+                    ? await subirPdfInformeADrive(cert, pdfBlob)
+                    : (cert.informe?.pdfUrl || null);
+                const { data: savedReport, error } = reportResult;
+                if (error) throw error;
+                cert.informe = { ...savedReport, fotos: [...fotosExistentes, ...fotosSubidas], pdfUrl };
+                closeModal('modal-registro');
+                renderRegistro();
+                showToast('Éxito', 'Informe técnico guardado.', 'fa-circle-check');
+            } catch (error) {
+                console.error('No se pudo guardar el informe en Supabase:', error);
+                showToast('Error', error.message || 'No se pudo guardar el informe.', 'fa-circle-exclamation');
+            } finally {
+                AppState.isSavingReport = false;
+                saveButton.disabled = false;
+                saveButton.textContent = 'Guardar informe';
+            }
+        });
+
+        function prepararInformeParaDescarga(informe) {
+            const fields = {
+                'informe-print-cliente': informe.cliente,
+                'informe-print-direccion': informe.direccion,
+                'informe-print-rut': informe.rut,
+                'informe-print-orden': informe.orden_trabajo,
+                'informe-print-equipo': informe.equipo,
+                'informe-print-marca': informe.marca,
+                'informe-print-anio': informe.anio,
+                'informe-print-modelo': informe.modelo,
+                'informe-print-patente': informe.patente,
+                'informe-print-problemas': informe.problemas,
+                'informe-print-proceso': informe.proceso,
+                'informe-print-recomendaciones': informe.recomendaciones
+            };
+            Object.entries(fields).forEach(([id, value]) => {
+                const el = document.getElementById(id);
+                if(el) el.textContent = value || '-';
+            });
+            
+            const photosContainer = document.getElementById('informe-print-fotos');
+            photosContainer.innerHTML = '';
+            
+            (informe.fotos || []).forEach((fotoObj, idx) => {
+                const src = typeof fotoObj === 'string' ? fotoObj : fotoObj.src;
+                const titleText = typeof fotoObj === 'string' ? `FOTOGRAFÍA ${idx + 1}` : (fotoObj.title || 'REGISTRO FOTOGRÁFICO');
+
+                const wrapper = document.createElement('div');
+                wrapper.setAttribute('data-pdf-keep-together', 'true');
+                wrapper.style.cssText = 'margin-bottom: 16px; page-break-inside: avoid; background: white; padding: 4px;';
+                
+                const title = document.createElement('div');
+                title.style.cssText = 'font-weight: bold; font-size: 10.5px; text-transform: uppercase; margin-bottom: 6px; color: #111; text-align: left; letter-spacing: 0.05em;';
+                title.textContent = titleText;
+                
+                const image = document.createElement('img');
+                image.src = src;
+                image.style.cssText = 'display: block; width: auto; height: auto; max-width: 100%; max-height: 180px; object-fit: contain; background: white; margin: 0 auto;';
+                
+                wrapper.appendChild(title);
+                wrapper.appendChild(image);
+                photosContainer.appendChild(wrapper);
+            });
+        }
+
+        async function descargarInformeSeleccionado() {
+            const cert = obtenerRegistroSeleccionado();
+            if (!cert?.informe?.pdfUrl) {
+                showToast('Informe pendiente', 'Edita y guarda el informe para crear su PDF.', 'fa-circle-info');
+                return;
+            }
+            window.open(cert.informe.pdfUrl, '_blank', 'noopener');
+        }
+
+        async function imprimirRegistro(id) {
+            const cert = buscarRegistro(id);
+            if (cert) await imprimirTicket(cert);
+        }
+
+        function goHome() {
+            switchView('produccion');
+        }
+
+        function triggerPhoto(type) {
+            document.getElementById(`file-${type}`).click();
+        }
+
+        async function handlePhotoUpload(input, type) {
+            const preview = document.getElementById(`prev-foto-${type}`);
+            const placeholder = document.getElementById(`placeholder-${type}`);
+            input.parentElement.classList.remove('photo-missing');
+            showToast('Procesando Imagen', 'Cargando archivo de evidencia...', 'fa-spinner animate-spin');
+            const file = input.files[0];
+            const resultUrl = await VirtualSupabase.uploadPhoto(file, type);
+            AppState.uploadedPhotos[type] = resultUrl;
+            preview.src = resultUrl;
+            preview.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            showToast('Imagen Registrada', `Fotografía de ${type} vinculada con éxito.`, 'fa-circle-check');
+        }
+
+        function validateRequiredFields() {
+            const form = document.getElementById('form-torque');
+            let isValid = true;
+
+            form.querySelectorAll('input:not([type="file"]):not([type="hidden"]), select, textarea').forEach((field) => {
+                const missing = !field.value.trim();
+                field.classList.toggle('field-missing', missing);
+                field.setAttribute('aria-invalid', missing ? 'true' : 'false');
+                field.addEventListener('input', () => {
+                    if (field.value.trim()) {
+                        field.classList.remove('field-missing');
+                        field.setAttribute('aria-invalid', 'false');
+                    }
+                }, { once: true });
+                field.addEventListener('change', () => {
+                    if (field.value.trim()) {
+                        field.classList.remove('field-missing');
+                        field.setAttribute('aria-invalid', 'false');
+                    }
+                }, { once: true });
+                if (missing) isValid = false;
+            });
+
+            if (!isValid) {
+                showToast('Campos pendientes', 'Completa todos los campos obligatorios.', 'fa-triangle-exclamation');
+            }
+            return isValid;
+        }
+
+        async function saveCertificate() {
+            const btn = document.getElementById('btn-save-certificate');
+            if (AppState.isSavingCertificate) return;
+            if (!validateRequiredFields()) return;
+            AppState.isSavingCertificate = true;
+            btn.setAttribute('disabled', 'true');
+            btn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin mr-2"></i> Generando documento oficial...`;
+            
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) {
+                    throw new Error('Debes iniciar sesión como gerencia para guardar registros.');
+                }
+                const fechaEmisionRaw = new Date();
+                const fechaVencimientoRaw = new Date();
+                fechaVencimientoRaw.setMonth(fechaVencimientoRaw.getMonth() + 3);
+
+                const opcionesFecha = { day: '2-digit', month: '2-digit', year: 'numeric' };
+
+                const record = {
+                    cliente: document.getElementById('input-cliente').value.trim(),
+                    direccion: document.getElementById('input-direccion').value.trim(),
+                    rut: document.getElementById('input-rut').value.trim(),
+                    orden_trabajo: document.getElementById('input-orden').value.trim(),
+                    equipo: document.getElementById('input-equipo').value.trim(),
+                    marca: document.getElementById('input-marca').value.trim(),
+                    anio: document.getElementById('input-anio').value.trim(),
+                    modelo: document.getElementById('input-modelo').value.trim(),
+                    patente: document.getElementById('input-patente').value.trim(),
+                    torque_nombre: document.getElementById('input-torque-nombre').value.trim(),
+                    modelo_herramienta: document.getElementById('input-modelo-herramienta').value.trim(),
+                    certificador: document.getElementById('input-certificador').value.trim(),
+                    num_certificado: document.getElementById('input-num-certificado').value.trim(),
+                    rango1: document.getElementById('input-rango1').value.trim(),
+                    rango2: document.getElementById('input-rango2').value.trim(),
+                    fecha_cert: document.getElementById('input-fecha-cert').value.trim(),
+                    venc_cert: document.getElementById('input-venc-cert').value.trim(),
+                    telefono: document.getElementById('input-telefono').value.trim(),
+                    kilometraje: document.getElementById('input-kilometraje').value.trim(),
+                    torque_aplicado: document.getElementById('input-torque').value.trim(),
+                    observaciones: document.getElementById('input-observaciones').value.trim(),
+                    fecha_emision: fechaEmisionRaw.toLocaleDateString('es-CL', opcionesFecha),
+                    fecha_vencimiento_registro: fechaVencimientoRaw.toLocaleDateString('es-CL', opcionesFecha)
+                };
+
+                const savedCertificate = await VirtualSupabase.insertCertificate(record);
+                registrarClienteDesdeRegistro(record);
+                btn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin mr-2"></i> Guardando PDF...`;
+                await guardarPdfCertificado(savedCertificate);
+                showToast('Éxito', 'Certificado generado con éxito.', 'fa-circle-check');
+                clearRegistrationForm();
+                switchView('registro');
+            } catch (err) {
+                console.error('No se pudo guardar el registro en Supabase:', err);
+                showToast('Error', err.message || 'No se pudo guardar el documento.', 'fa-circle-exclamation');
+            } finally {
+                AppState.isSavingCertificate = false;
+                btn.removeAttribute('disabled');
+                btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> Guardar registro`;
+            }
+        }
+
+        function clearRegistrationForm() {
+            const form = document.getElementById('form-torque');
+            form.reset();
+            form.querySelectorAll('.field-missing').forEach((field) => {
+                field.classList.remove('field-missing');
+                field.setAttribute('aria-invalid', 'false');
+            });
+
+        }
+
+        async function imprimirTicket(cert, shouldPrint = true) {
+            document.getElementById('print-cliente').textContent = cert.cliente;
+            document.getElementById('print-orden').textContent = cert.orden_trabajo;
+            document.getElementById('print-equipo').textContent = cert.equipo;
+            document.getElementById('print-marca').textContent = cert.marca;
+            document.getElementById('print-modelo').textContent = cert.modelo;
+            document.getElementById('print-patente').textContent = cert.patente;
+            document.getElementById('print-torque-nombre').textContent = cert.torque_nombre;
+            document.getElementById('print-modelo-herramienta').textContent = cert.modelo_herramienta;
+            document.getElementById('print-certificador').textContent = cert.certificador;
+            document.getElementById('print-num-certificado').textContent = cert.num_certificado;
+            document.getElementById('print-rango1').textContent = cert.rango1;
+            document.getElementById('print-rango2').textContent = cert.rango2;
+            document.getElementById('print-fecha-cert').textContent = cert.fecha_cert;
+            document.getElementById('print-venc-cert').textContent = cert.venc_cert;
+            document.getElementById('print-telefono').textContent = cert.telefono;
+            document.getElementById('print-table-equi-marca').textContent = `${cert.equipo} ${cert.marca}`;
+            document.getElementById('print-table-modelo').textContent = cert.modelo;
+            document.getElementById('print-torque-aplicado').textContent = cert.torque_aplicado;
+            document.getElementById('print-kilometraje').textContent = cert.kilometraje;
+            document.getElementById('print-observaciones').textContent = cert.observaciones;
+            
+            let dEmision = cert.fecha_emision;
+            
+            if (!dEmision) { // Fallback para registros demo u ocultos anteriores
+                const d = new Date(cert.created_at);
+                const opcionesFecha = { day: '2-digit', month: '2-digit', year: 'numeric' };
+                dEmision = d.toLocaleDateString('es-CL', opcionesFecha);
+            }
+            document.getElementById('print-fecha-emision').textContent = dEmision;
+
+            const createdDate = new Date(cert.created_at);
+            const formattedDate = createdDate
+                .toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' })
+                .replace(/ de (\d{4})$/, ' del $1');
+            document.getElementById('print-footer-fecha').textContent = `${formattedDate}`;
+
+            if (shouldPrint) {
+                await imprimirCertificadoComoPdf(cert);
+            }
+        }
+
+        async function imprimirCertificadoComoPdf(cert) {
+            const printArea = document.getElementById('print-area');
+            const previousStyle = printArea.getAttribute('style');
+            const previousClass = printArea.className;
+            let restoreTimer = null;
+
+            const restorePrintArea = () => {
+                if (restoreTimer) {
+                    clearTimeout(restoreTimer);
+                    restoreTimer = null;
+                }
+                if (previousStyle === null) printArea.removeAttribute('style');
+                else printArea.setAttribute('style', previousStyle);
+                printArea.className = previousClass;
+            };
+
+            try {
+                printArea.className = '';
+                printArea.removeAttribute('style');
+                showToast('Imprimiendo', 'Preparando certificado para imprimir...', 'fa-spinner animate-spin');
+                window.addEventListener('afterprint', restorePrintArea, { once: true });
+                window.print();
+                restoreTimer = setTimeout(restorePrintArea, 1000);
+                showToast('Listo', 'Certificado enviado al diálogo de impresión.', 'fa-circle-check');
+            } catch (error) {
+                console.error('Error al imprimir el certificado:', error);
+                showToast('Error', 'No se pudo imprimir el certificado.', 'fa-circle-exclamation');
+                restorePrintArea();
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function showToast(title, message, iconClass) {
+            const toast = document.getElementById('system-toast');
+            document.getElementById('toast-title').textContent = title;
+            document.getElementById('toast-message').textContent = message;
+            document.getElementById('toast-icon').className = `fa-solid ${iconClass} text-brand-400 text-lg`;
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3500);
+        }
+    </script>
+</body>
+</html>

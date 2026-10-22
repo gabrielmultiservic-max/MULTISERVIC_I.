@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MULTISERVIC — Enterprise Portal</title>
+  <meta name="theme-color" content="#030108">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VULCANIZACION">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --bg-base: #030108;
+      --bg-surface: #0a0518;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --input-bg: rgba(25, 14, 52, 0.5);
+      --accent: #8b5cf6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      background: var(--bg-base);
+      color: var(--text-main);
+      overflow-x: hidden;
+      overflow-y: auto;
+      display: block;
+    }
+
+    .app-container { display: flex; width: 100vw; height: 100vh; background: var(--bg-base); }
+
+    .hero-panel {
+      flex: 1.45;
+      position: relative;
+      background: linear-gradient(135deg, rgba(3, 1, 8, 0.82) 0%, rgba(10, 5, 24, 0.75) 100%), url('https://images.pexels.com/photos/34150292/pexels-photo-34150292.jpeg?_gl=1*1890ezm*_ga*MTYxNTM5MzIzNy4xNzg1ODY1MTQx*_ga_8JE65Q40S6*czE3ODcyMDU1MjIkbzMkZzEkdDE3ODcyMDU5MTQkajM0JGwwJGgw');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 50px 60px;
+      overflow: hidden;
+    }
+
+    .brand-header { display: flex; align-items: center; gap: 14px; z-index: 10; }
+    .brand-logo-badge {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.04);
+    }
+    .brand-logo-badge img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .brand-logo-text { font-size: 0.85rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+
+    .brand-info { z-index: 10; max-width: 480px; }
+    .brand-title { font-size: 3.2rem; font-weight: 800; color: #ffffff; line-height: 1.1; margin-bottom: 12px; }
+    .brand-subtitle { font-size: 1.15rem; color: var(--text-muted); }
+
+    .login-panel {
+      flex: 0.7; background: var(--bg-surface);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      padding: 40px 36px; border-left: 1px solid var(--border-color); position: relative;
+    }
+
+    .login-box {
+      width: 100%; max-width: 380px;
+      background: rgba(15, 8, 35, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 50px 30px 35px 30px;
+      display: flex; flex-direction: column; text-align: center;
+      position: relative;
+      margin-top: 30px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    }
+
+    /* Single Top Floating Avatar Circle */
+    .top-avatar-container {
+      position: absolute;
+      top: -45px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      border: 3px solid var(--accent);
+      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .top-avatar-container img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .login-header { margin-bottom: 16px; text-align: center; }
+    .login-title { font-size: 1.8rem; font-weight: 800; margin-bottom: 4px; }
+    .login-subtitle-text { font-size: 0.85rem; color: var(--text-muted); }
+
+    /* Tabs de Rol */
+    .role-tabs { display: flex; gap: 6px; margin-bottom: 18px; background: rgba(25, 14, 52, 0.4); padding: 4px; border-radius: 10px; border: 1px solid var(--border-color); }
+    .role-tab { flex: 1; padding: 8px; border: none; background: transparent; color: var(--text-muted); border-radius: 7px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 0.8rem; }
+    .role-tab.active { background: var(--accent); color: white; }
+
+    .login-form { display: flex; flex-direction: column; gap: 14px; }
+    .dynamic-inputs { min-height: 110px; display: flex; flex-direction: column; justify-content: center; }
+
+    .input-group { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+    .input-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: flex; justify-content: space-between; }
+    .forgot-link { color: var(--accent); text-decoration: none; font-size: 0.78rem; }
+
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+    .input-icon { position: absolute; left: 14px; color: #64748b; font-size: 0.9rem; }
+    .form-input {
+      width: 100%; height: 44px; background: var(--input-bg);
+      border: 1px solid rgba(140, 110, 220, 0.2); border-radius: 10px;
+      padding: 0 40px 0 42px; color: var(--text-main); font-size: 0.9rem; outline: none; transition: 0.2s;
+    }
+    .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2); }
+
+    .toggle-pass { position: absolute; right: 12px; background: none; border: none; color: #64748b; cursor: pointer; }
+
+    .btn-submit {
+      width: 100%; height: 46px; border: none; border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+      color: white; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      display: flex; justify-content: center; align-items: center; gap: 8px;
+      box-shadow: 0 0 25px rgba(124, 58, 237, 0.3); transition: 0.2s; margin-top: 6px;
+    }
+    .btn-submit:hover { opacity: 0.95; transform: translateY(-1px); }
+
+    .register-link {
+      display: block; margin-top: 2px; border: none; background: transparent;
+      color: #c084fc; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    }
+    .register-link:hover { color: #e9d5ff; text-decoration: underline; }
+
+    .spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .register-modal {
+      position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center;
+      padding: 20px; background: rgba(3, 1, 8, 0.78);
+    }
+    .register-modal.hidden { display: none; }
+    .register-box {
+      position: relative; width: 100%; max-width: 390px; padding: 30px;
+      background: #0f0823; border: 1px solid var(--border-color); border-radius: 18px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    }
+    .register-box h3 { margin-bottom: 6px; font-size: 1.35rem; }
+    .register-box p { margin-bottom: 20px; color: var(--text-muted); font-size: 0.85rem; }
+    .register-form { display: flex; flex-direction: column; gap: 14px; }
+    .register-close {
+      position: absolute; top: 10px; right: 14px; border: none; background: transparent;
+      color: var(--text-muted); font-size: 1.4rem; cursor: pointer;
+    }
+    .register-close:hover { color: white; }
+
+    .toast {
+      position: fixed; bottom: -80px; left: 50%; transform: translateX(-50%);
+      background: rgba(20, 12, 40, 0.95); border: 1px solid rgba(139, 92, 246, 0.4);
+      color: white; padding: 10px 20px; border-radius: 30px; font-size: 0.85rem;
+      transition: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 1000; display: flex; align-items: center; gap: 10px;
+    }
+    .toast.show { bottom: 30px; }
+
+    @media (max-width: 1024px) {
+      .app-container { flex-direction: column; min-height: 100vh; }
+      .hero-panel { min-height: 280px; padding: 30px 22px; }
+      .brand-title { font-size: 2.5rem; }
+      .login-panel { padding: 30px 18px 40px; border-left: none; border-top: 1px solid var(--border-color); }
+      .login-box { max-width: 100%; }
+    }
+
+    @media (max-width: 640px) {
+      .hero-panel { min-height: 220px; padding: 22px 18px 28px; }
+      .brand-header { gap: 10px; }
+      .brand-logo-badge { width: 42px; height: 42px; }
+      .brand-logo-text { letter-spacing: 1.2px; font-size: 0.7rem; }
+      .brand-title { font-size: 2rem; }
+      .brand-subtitle { font-size: 0.95rem; }
+      .login-panel { padding: 22px 14px 30px; }
+      .login-box { padding: 40px 16px 20px; border-radius: 18px; }
+      .login-title { font-size: 1.45rem; }
+      .role-tabs { gap: 4px; }
+      .role-tab { font-size: 0.72rem; padding: 9px 6px; }
+      .btn-submit { height: 44px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <section class="hero-panel">
+      <div class="brand-header">
+        <div class="brand-logo-badge">
+          <img src="SPEED.png" alt="SPEED logo" />
+        </div>
+        <span class="brand-logo-text">Multiservic</span>
+      </div>
+      <div class="brand-info">
+        <h1 class="brand-title">MULTISERVIC</h1>
+        <p class="brand-subtitle">Todo en un solo lugar</p>
+      </div>
+    </section>
+
+    <section class="login-panel">
+      <div class="login-box">
+        <!-- Círculo Superior Flotante con Imagen Dinámica -->
+        <div class="top-avatar-container" id="topAvatarContainer">
+          <img id="avatarImg" src="https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=200" alt="Avatar" />
+        </div>
+
+        <div class="login-header">
+          <h2 class="login-title">INICIO</h2>
+          <p class="login-subtitle-text">Selecciona tu perfil de acceso.</p>
+        </div>
+
+        <div class="role-tabs">
+          <button type="button" class="role-tab active" data-role="personal">Personal</button>
+          <button type="button" class="role-tab" data-role="gerencia">Gerencia</button>
+        </div>
+
+        <form class="login-form" id="loginForm" onsubmit="return false;">
+          <div class="dynamic-inputs">
+            <div class="input-group" id="userGroup">
+              <label class="input-label" for="username">Correo electrónico</label>
+              <div class="input-wrapper">
+                <i class="fa-regular fa-user input-icon"></i>
+                <input type="email" id="username" class="form-input" placeholder="correo@ejemplo.com" autocomplete="username" />
+              </div>
+            </div>
+
+            <div class="input-group" id="passGroup" style="margin-top: 10px;">
+              <label class="input-label" for="password">
+                <span>Contraseña</span>
+                <a href="#" class="forgot-link" onclick="event.preventDefault(); showToast('Contacta al administrador.');">¿Olvidaste?</a>
+              </label>
+              <div class="input-wrapper">
+                <i class="fa-regular fa-lock input-icon"></i>
+                <input type="password" id="password" class="form-input" placeholder="••••••••" />
+                <button type="button" class="toggle-pass" id="togglePass"><i class="fa-regular fa-eye"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="btnSubmit">
+            <span class="spinner" id="spinner"></span>
+            <span id="btnText">INGRESAR COMO PERSONAL</span>
+          </button>
+          <button type="button" class="register-link" id="openRegister">¿No tienes cuenta? Regístrate</button>
+        </form>
+      </div>
+    </section>
+  </div>
+
+  <div class="register-modal hidden" id="registerModal" role="dialog" aria-modal="true" aria-labelledby="registerTitle">
+    <div class="register-box" onclick="event.stopPropagation();">
+      <button type="button" class="register-close" id="closeRegister" aria-label="Cerrar">&times;</button>
+      <h3 id="registerTitle">Solicitar cuenta personal</h3>
+      <p>Completa tus datos. Gerencia deberá aprobar tu solicitud antes de que puedas ingresar.</p>
+      <form class="register-form" id="registerForm">
+        <div class="input-group">
+          <label class="input-label" for="registerFullName">Nombre completo</label>
+          <input type="text" id="registerFullName" class="form-input" placeholder="Tu nombre completo" autocomplete="name" required />
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="registerEmail">Correo electrónico</label>
+          <input type="email" id="registerEmail" class="form-input" placeholder="correo@ejemplo.com" autocomplete="email" required />
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="registerPassword">Contraseña</label>
+          <input type="password" id="registerPassword" class="form-input" placeholder="Mínimo 6 caracteres" autocomplete="new-password" required minlength="6" />
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="registerPasswordConfirm">Repetir contraseña</label>
+          <input type="password" id="registerPasswordConfirm" class="form-input" placeholder="Repite tu contraseña" autocomplete="new-password" required minlength="6" />
+        </div>
+        <button type="submit" class="btn-submit" id="registerSubmit">
+          <span class="spinner" id="registerSpinner"></span>
+          <span id="registerButtonText">ENVIAR SOLICITUD</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">
+    <i class="fa-solid fa-circle-check" style="color: #c084fc;"></i>
+    <span id="toastText">Mensaje</span>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://prcdjgavxfpcgzeebihr.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByY2RqZ2F2eGZwY2d6ZWViaWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MTI4MDcsImV4cCI6MjEwMzQ4ODgwN30.A0oVHA_PUypjoiGqWi0na1rrGCtgEaoEeUsqhAbD6Mw';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const tabs = document.querySelectorAll('.role-tab');
+      const avatarImg = document.getElementById('avatarImg');
+      const userGroup = document.getElementById('userGroup');
+      const passGroup = document.getElementById('passGroup');
+      const userInput = document.getElementById('username');
+      const passInput = document.getElementById('password');
+      const btnText = document.getElementById('btnText');
+      const btnSubmit = document.getElementById('btnSubmit');
+      const registerLink = document.getElementById('openRegister');
+      const spinner = document.getElementById('spinner');
+      const togglePass = document.getElementById('togglePass');
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toastText');
+      const registerModal = document.getElementById('registerModal');
+      const registerForm = document.getElementById('registerForm');
+      const registerFullName = document.getElementById('registerFullName');
+      const registerEmail = document.getElementById('registerEmail');
+      const registerPassword = document.getElementById('registerPassword');
+      const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+      const registerSubmit = document.getElementById('registerSubmit');
+      const registerSpinner = document.getElementById('registerSpinner');
+      const registerButtonText = document.getElementById('registerButtonText');
+
+      let role = 'personal';
+
+      const avatarImages = {
+        personal: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=200',
+        gerencia: 'https://images.pexels.com/photos/3785077/pexels-photo-3785077.jpeg?auto=compress&cs=tinysrgb&w=200'
+      };
+
+      function setRole(selectedRole) {
+        role = selectedRole;
+
+        tabs.forEach(t => {
+          if (t.getAttribute('data-role') === role) t.classList.add('active');
+          else t.classList.remove('active');
+        });
+
+        // Cambiar la imagen del círculo superior según el rol
+        avatarImg.src = avatarImages[role];
+
+        if (role === 'personal') {
+          userGroup.style.display = 'flex';
+          passGroup.style.display = 'flex';
+          registerLink.style.display = 'block';
+          userInput.placeholder = 'correo@ejemplo.com';
+          userInput.required = true;
+          passInput.required = true;
+          btnText.textContent = 'INGRESAR COMO PERSONAL';
+        } else {
+          userGroup.style.display = 'flex';
+          passGroup.style.display = 'flex';
+          registerLink.style.display = 'none';
+          userInput.required = true;
+          passInput.required = true;
+          userInput.placeholder = 'gerencia@ejemplo.com';
+          btnText.textContent = 'INGRESAR COMO GERENCIA';
+        }
+      }
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          setRole(tab.getAttribute('data-role'));
+        });
+      });
+
+      togglePass.addEventListener('click', () => {
+        const isPass = passInput.type === 'password';
+        passInput.type = isPass ? 'text' : 'password';
+        togglePass.querySelector('i').className = isPass ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+      });
+
+      window.showToast = (msg) => {
+        toastText.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 3000);
+      };
+
+      function cerrarRegistro() {
+        registerModal.classList.add('hidden');
+        registerForm.reset();
+        registerSubmit.disabled = false;
+        registerSpinner.style.display = 'none';
+        registerButtonText.textContent = 'ENVIAR SOLICITUD';
+      }
+
+      registerLink.addEventListener('click', () => {
+        registerModal.classList.remove('hidden');
+        registerEmail.focus();
+      });
+      document.getElementById('closeRegister').addEventListener('click', cerrarRegistro);
+      registerModal.addEventListener('click', cerrarRegistro);
+
+      registerForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const fullName = registerFullName.value.trim();
+        const email = registerEmail.value.trim();
+        const password = registerPassword.value;
+        const passwordConfirm = registerPasswordConfirm.value;
+
+        if (password !== passwordConfirm) {
+          showToast('Las contraseñas no coinciden.');
+          return;
+        }
+
+        registerSubmit.disabled = true;
+        registerSpinner.style.display = 'inline-block';
+        registerButtonText.textContent = 'REGISTRANDO...';
+
+        try {
+          const { data, error } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                full_name: fullName
+              }
+            }
+          });
+          if (error) throw error;
+          if (!data.user || !data.user.identities?.length) {
+            throw new Error('Este correo ya tiene una cuenta registrada. Ingresa con tus credenciales.');
+          }
+
+          cerrarRegistro();
+          if (data.session) await supabaseClient.auth.signOut();
+          showToast('Solicitud enviada. Espera la aprobación de Gerencia.');
+        } catch (error) {
+          console.error('No se pudo registrar la cuenta personal:', error);
+          registerSubmit.disabled = false;
+          registerSpinner.style.display = 'none';
+          registerButtonText.textContent = 'ENVIAR SOLICITUD';
+          showToast(error.message || 'No se pudo completar el registro.');
+        }
+      });
+
+      document.getElementById('loginForm').addEventListener('submit', async () => {
+        const usernameValue = userInput.value.trim();
+        const passwordValue = passInput.value;
+
+        if (!usernameValue || !passwordValue) {
+          showToast(role === 'gerencia'
+            ? 'Por favor completa tus credenciales de gerencia.'
+            : 'Por favor completa tu correo y contraseña.');
+          return;
+        }
+
+        spinner.style.display = 'inline-block';
+        btnText.textContent = 'ACCEDIENDO...';
+        btnSubmit.disabled = true;
+
+        let data;
+        let error;
+        try {
+          ({ data, error } = await supabaseClient.auth.signInWithPassword({
+            email: usernameValue,
+            password: passwordValue
+          }));
+        } catch (connectionError) {
+          console.error('Error de conexión con Supabase:', connectionError);
+          spinner.style.display = 'none';
+          btnText.textContent = role === 'gerencia' ? 'INGRESAR COMO GERENCIA' : 'INGRESAR COMO PERSONAL';
+          btnSubmit.disabled = false;
+          showToast('No se pudo conectar con Supabase.');
+          return;
+        }
+
+        if (error) {
+          spinner.style.display = 'none';
+          btnText.textContent = role === 'gerencia' ? 'INGRESAR COMO GERENCIA' : 'INGRESAR COMO PERSONAL';
+          btnSubmit.disabled = false;
+          showToast('Correo o contraseña incorrectos o cuenta no confirmada.');
+          return;
+        }
+
+        if (role === 'personal') {
+          const { data: profile, error: profileError } = await supabaseClient
+            .from('user_profiles')
+            .select('status')
+            .eq('user_id', data.user.id)
+            .single();
+          if (profileError) {
+            await supabaseClient.auth.signOut();
+            spinner.style.display = 'none';
+            btnText.textContent = 'INGRESAR COMO PERSONAL';
+            btnSubmit.disabled = false;
+            showToast('No se pudo verificar el estado de tu solicitud.');
+            return;
+          }
+          if (profile.status !== 'approved') {
+            await supabaseClient.auth.signOut();
+            spinner.style.display = 'none';
+            btnText.textContent = 'INGRESAR COMO PERSONAL';
+            btnSubmit.disabled = false;
+            showToast(profile.status === 'rejected'
+              ? 'Tu solicitud fue rechazada. Contacta a Gerencia.'
+              : 'Tu solicitud está pendiente de aprobación.');
+            return;
+          }
+          sessionStorage.setItem('userRole', 'personal');
+        } else {
+          sessionStorage.setItem('userRole', 'gerencia');
+        }
+        window.location.href = 'cara.html';
+      });
+
+      setRole('personal');
+
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch((error) => {
+            console.warn('No se pudo activar el modo instalable.', error);
+          });
+        });
+      }
+    });
+  </script>
+</body>
+</html>

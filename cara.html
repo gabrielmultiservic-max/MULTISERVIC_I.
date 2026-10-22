@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>¿Qué hacemos?</title>
+  <script>
+    (function () {
+      const role = sessionStorage.getItem('userRole');
+      if (role !== 'personal' && role !== 'gerencia') {
+        window.location.replace('index.html');
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #1A2430;
+      background-image: linear-gradient(rgba(26, 36, 48, 0.15), rgba(26, 36, 48, 0.15)), url('fondo.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      color: #f9f9f9;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    h1, h2 {
+      font-size: 2.5rem;
+      color: #d1d5db;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      font-size: 1.4rem;
+      color: #9ca3af;
+      margin-bottom: 40px;
+      font-weight: 500;
+    }
+
+    .cards-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 20px;
+    }
+
+    .card {
+      width: calc(25% - 30px);
+      min-width: 280px;
+      background: #384C62;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      text-align: center;
+      padding: 20px;
+      cursor: pointer;
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .card img {
+      width: 100%;
+      height: 200px;
+      object-fit: contain;
+      padding: 10px;
+      background: #425A72;
+      border-radius: 8px;
+    }
+
+    .card-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin: 20px 0;
+      color: #f9f9f9;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: #253343;
+      padding: 30px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 500px;
+      text-align: left;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .modal-content h3 {
+      margin-bottom: 20px;
+      color: #f9f9f9;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #9ca3af;
+      font-size: 0.9rem;
+    }
+
+    .form-group input, .form-group select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #425A72;
+      background: #1A2430;
+      color: #fff;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: none;
+      border: none;
+      color: #9ca3af;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .btn-submit {
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .btn-submit:hover {
+      background-color: #2563eb;
+    }
+
+    @media (max-width: 1024px) {
+      .card {
+        width: calc(50% - 15px);
+      }
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 24px 12px 36px;
+      }
+
+      .container {
+        max-width: 100%;
+      }
+
+      .card {
+        width: 100%;
+        min-width: 0;
+      }
+
+      h1, h2 {
+        font-size: 2.1rem;
+      }
+
+      .subtitle {
+        font-size: 1.1rem;
+        margin-bottom: 24px;
+      }
+
+      .cards-container {
+        gap: 18px;
+      }
+
+      .card img {
+        height: 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>VULCANIZACION</h2>
+    <p class="subtitle">MULTISERVIC FLORES</p>
+
+    <div class="cards-container">
+      <div class="card product-card" id="cardRegistroNuevo">
+        <img src="https://img.icons8.com/external-yogi-aprelliyanto-glyph-yogi-aprelliyanto/1200/external-torque-wrench-electrician-element-yogi-aprelliyanto-glyph-yogi-aprelliyanto.jpg" alt="Torque" />
+        <h3 class="card-title">Torque</h3>
+      </div>
+
+      <div class="card product-card">
+        <img src="https://image.made-in-china.com/202f0j00VcWgdDubrkoO/CCD-Wheel-Alignment-Machine-Price-for-Auto-Diagnostic-Tools.webp" alt="Alineación" />
+        <h3 class="card-title">Alineación</h3>
+      </div>
+
+      <div class="card product-card">
+        <img src="https://e7.pngegg.com/pngimages/931/626/png-clipart-businessperson-business-company-people.png" alt="Vulcanización" />
+        <h3 class="card-title">Procedimientos de Empresa</h3>
+      </div>
+    </div>
+  </div>
+  
+
+  <div class="modal-overlay" id="registroModal">
+    <div class="modal-content">
+      <button class="modal-close" id="closeModal">&times;</button>
+      <h3>NUEVO REGISTRO DE STOCK</h3>
+      <form id="formRegistro">
+        <div class="form-group">
+          <label for="nombreProducto">Nombre del Producto / Material</label>
+          <input type="text" id="nombreProducto" required>
+        </div>
+        <div class="form-group">
+          <label for="categoria">Categoría</label>
+          <select id="categoria">
+            <option value="vinil">Vinil</option>
+            <option value="lona">Lona</option>
+            <option value="papel">Papel</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="cantidad">Cantidad Inicial (Metros / Unidades)</label>
+          <input type="number" id="cantidad" required>
+        </div>
+        <button type="submit" class="btn-submit">Guardar Registro</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const modal = document.getElementById('registroModal');
+    const cardRegistro = document.getElementById('cardRegistroNuevo');
+    const closeModal = document.getElementById('closeModal');
+    const formRegistro = document.getElementById('formRegistro');
+
+    cardRegistro.addEventListener('click', () => {
+      window.location.href = 'primero prueba.html';
+    });
+
+    closeModal.addEventListener('click', () => {
+      modal.classList.remove('active');
+    });
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.classList.remove('active');
+      }
+    });
+
+    formRegistro.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('nombreProducto').value;
+      const cantidad = document.getElementById('cantidad').value;
+      
+      const msgBox = document.createElement('div');
+      msgBox.style.cssText = "position:fixed; top:20px; right:20px; background:#10b981; color:white; padding:15px 25px; border-radius:8px; z-index:2000; box-shadow:0 4px 12px rgba(0,0,0,0.3); font-weight:600;";
+      msgBox.innerText = `¡Éxito! Se ha registrado "${nombre}" con una cantidad de ${cantidad}.`;
+      document.body.appendChild(msgBox);
+      setTimeout(() => msgBox.remove(), 4000);
+
+      formRegistro.reset();
+      modal.classList.remove('active');
+    });
+
+    // Handle product cards except the first one
+    document.querySelectorAll('.product-card').forEach((card, index) => {
+      if (index === 0) {
+        return;
+      }
+
+      card.addEventListener('click', function() {
+        const title = this.querySelector('.card-title').innerText;
+        const msgBox = document.createElement('div');
+        msgBox.style.cssText = "position:fixed; top:20px; right:20px; background:#3b82f6; color:white; padding:15px 25px; border-radius:8px; z-index:2000; box-shadow:0 4px 12px rgba(0,0,0,0.3); font-weight:600;";
+        msgBox.innerText = `Consultando detalles de inventario para: ${title}`;
+        document.body.appendChild(msgBox);
+        setTimeout(() => msgBox.remove(), 3000);
+      });
+    });
+  </script>
+
+</body>
+</html>
