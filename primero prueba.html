@@ -3374,9 +3374,12 @@
 
         async function imprimirTicket(cert, shouldPrint = true) {
             document.getElementById('print-cliente').textContent = cert.cliente;
+            document.getElementById('print-direccion').textContent = cert.direccion || '';
+            document.getElementById('print-rut').textContent = cert.rut;
             document.getElementById('print-orden').textContent = cert.orden_trabajo;
             document.getElementById('print-equipo').textContent = cert.equipo;
             document.getElementById('print-marca').textContent = cert.marca;
+            document.getElementById('print-anio').textContent = cert.anio;
             document.getElementById('print-modelo').textContent = cert.modelo;
             document.getElementById('print-patente').textContent = cert.patente;
             document.getElementById('print-torque-nombre').textContent = cert.torque_nombre;
